@@ -386,6 +386,9 @@ void CMapView::SetDefaults()
 	_useAlternatePanCursor = VARIANT_FALSE;
 	_recenterMapOnZoom = VARIANT_FALSE;
 
+	_useConstrainingExtents = FALSE;
+	_xMin = _yMin = _xMax = _yMax = 0.0;
+
 	// TODO: perhaps it's better to grab those from property exchanged (i.e. reverting only runtime changes)
 	// perhaps this call can do this:
 	//RequestAsynchronousExchange(GetPropertyExchangeVersion());

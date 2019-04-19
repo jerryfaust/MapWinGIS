@@ -121,7 +121,7 @@ struct GlobalSettingsInfo
         mouseTolerance = 20;
         allowLayersWithoutProjection = true;
         allowProjectionMismatch = true;
-        reprojectLayersOnAdding = false;
+        reprojectLayersOnAdding = true;
         emptyBstr = SysAllocString(L"");
         gdalBstr = SysAllocString(L"GDAL");
         identifierColor = RGB(30, 144, 255);

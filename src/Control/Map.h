@@ -624,6 +624,22 @@ public:
 
 	afx_msg void SetRecenterMapOnZoom(VARIANT_BOOL nNewValue);
 	afx_msg VARIANT_BOOL GetRecenterMapOnZoom();
+
+	// Swift API
+	afx_msg VARIANT_BOOL SetConstrainingExtents(DOUBLE xMin, DOUBLE yMin, DOUBLE xMax, DOUBLE yMax);
+	afx_msg void FreezeCurrentExtents();
+	afx_msg void SetLayerLabelMaxScale(LONG LayerHandle, DOUBLE maxScale);
+	afx_msg void SetLayerLabelMinScale(LONG LayerHandle, DOUBLE minScale);
+	afx_msg void SetLayerLabelColumn(LONG LayerHandle, LPCTSTR ColumnName);
+	afx_msg void SetLayerIDColumn(LONG LayerHandle, LPCTSTR ColumnName);
+	afx_msg void SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, BOOL ScaledFonts);
+	afx_msg void SetLayerLabelScaling(LONG LayerHandle, LONG FontSize, DOUBLE RelativeScale);
+	afx_msg void SetLayerLabelHalo(LONG LayerHandle, LONG HaloSize, LONG HaloColor);
+	afx_msg void SetLayerLabelShadow(LONG LayerHandle, LONG OffsetX, LONG OffsetY, LONG ShadowColor);
+	afx_msg void SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, LONG FontColor, BOOL FontBold, BOOL FontItalic);
+	afx_msg void GenerateLayerLabels(LONG LayerHandle);
+	afx_msg long AddLayerAndResave(LPCTSTR Filename, BOOL visible);
+
 #pragma endregion
 
 	//}}AFX_DISPATCH
@@ -821,6 +837,13 @@ public:
 	BOOL _canUseImageGrouping;
 	BOOL _useAlternatePanCursor;		// use traditional Hand cursor for panning rather than NSEW cursor
 	BOOL _recenterMapOnZoom;			// recenter the map at the clicked zoom point
+	
+	// Swift API support
+	BOOL _useConstrainingExtents;
+	double _xMin, _yMin, _xMax, _yMax;
+	// map LayerHandles to Label columns
+	std::map<long, CString> _labelColumns;
+
 	tkCustomState _panningInertia;			
 	BOOL _reuseTileBuffer;			
 	tkCustomState _zoomAnimation;			

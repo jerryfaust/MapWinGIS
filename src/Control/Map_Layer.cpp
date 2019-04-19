@@ -848,7 +848,9 @@ bool CMapView::CheckLayerProjection( Layer* layer, int layerHandle )
 		return false;
 	}
 			
-	if (layer->IsShapefile()) {
+	if (layer->IsShapefile()) 
+	{
+		// save reprojected state
 		return ReprojectLayer(layer, layerHandle);
 	}
 
@@ -1232,6 +1234,44 @@ void CMapView::SetLayerMinVisibleScale(LONG LayerHandle, DOUBLE newVal)
 	}
 }
 
+
+// ****************************************************************** 
+//		SetLayerLabelMaxScale
+// ****************************************************************** 
+void CMapView::SetLayerLabelMaxScale(LONG LayerHandle, DOUBLE maxScale)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+	Layer* layer = GetLayer(LayerHandle);
+	if (layer)
+	{
+		ILabels* lbls = layer->get_Labels();
+		if (lbls)
+		{
+			lbls->put_DynamicVisibility(VARIANT_TRUE);
+			lbls->put_MaxVisibleScale(maxScale);
+		}
+	}
+}
+
+// ****************************************************************** 
+//		SetLayerLabelMinScale
+// ****************************************************************** 
+void CMapView::SetLayerLabelMinScale(LONG LayerHandle, DOUBLE MinScale)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+	Layer* layer = GetLayer(LayerHandle);
+	if (layer)
+	{
+		ILabels* lbls = layer->get_Labels();
+		if (lbls)
+		{
+			lbls->put_DynamicVisibility(VARIANT_TRUE);
+			lbls->put_MinVisibleScale(MinScale);
+		}
+	}
+}
+
+
 // ****************************************************************** 
 //		LayerMinVisibleZoom
 // ****************************************************************** 
@@ -1254,7 +1294,7 @@ void CMapView::SetLayerMinVisibleZoom(LONG LayerHandle, int newVal)
 }
 
 // ****************************************************************** 
-//		LayerMaxVisibleScale
+//		LayerMaxVisibleZoom
 // ****************************************************************** 
 int CMapView::GetLayerMaxVisibleZoom(LONG LayerHandle)
 {
@@ -2095,5 +2135,401 @@ Layer* CMapView::get_LayerByPosition(int position)
 	return layerHandle != -1 ? GetLayer(layerHandle) : NULL;
 }
 
+// ****************************************************************** 
+//		SetLayerIDColumn
+// ****************************************************************** 
+void CMapView::SetLayerIDColumn(LONG LayerHandle, LPCTSTR ColumnName)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
+	// save value for future reference
+
+}
+
+
+// ****************************************************************** 
+//		SetLayerLabelColumn
+// ****************************************************************** 
+void CMapView::SetLayerLabelColumn(LONG LayerHandle, LPCTSTR ColumnName)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// save label column
+	_labelColumns[LayerHandle] = CString(ColumnName);
+	// pass on to SetLayerLabelAttributes
+	SetLayerLabelAttributes(LayerHandle, "Arial", 10, FALSE);
+}
+
+
+// ****************************************************************** 
+//		SetLayerLabelAttributes
+// ****************************************************************** 
+void CMapView::SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, BOOL ScaleFonts)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// make sure we have the Label column name
+	CString strColumn = _labelColumns[LayerHandle];
+	if (strColumn.GetLength() > 0)
+	{
+		// set up Labeling
+		IShapefile* sf = GetShapefile(LayerHandle);
+		if (sf)
+		{
+			// Labels reference
+			ILabels* labels = nullptr;
+			sf->get_Labels(&labels);
+			if (labels != nullptr)
+			{
+				// general label settings
+				CComBSTR bstr(FontName);
+				labels->put_UseGdiPlus(VARIANT_TRUE);
+				labels->put_RemoveDuplicates(VARIANT_TRUE);
+				labels->put_Visible(VARIANT_TRUE);
+				labels->put_FrameVisible(VARIANT_FALSE);
+				labels->put_FontName(bstr.Copy());
+				labels->put_FontSize(FontSize);
+				//labels->put_HaloVisible(VARIANT_TRUE);
+				//labels->put_HaloSize(5);
+				//labels->put_FontOutlineVisible(VARIANT_TRUE);
+				//labels->put_FontOutlineColor(0xFFFFFF);
+				labels->put_AvoidCollisions(VARIANT_TRUE);
+				labels->put_ScaleLabels(ScaleFonts);
+				if (ScaleFonts)
+				{
+					labels->put_FontSize2(FontSize + 2);
+				}
+
+				//// get layer drawing options
+				//IShapeDrawingOptions* options = nullptr;
+				//sf->get_DefaultDrawingOptions(&options);
+				//if (options != nullptr)
+				//{
+					//// label positioning
+					//tkLabelPositioning labelPos = tkLabelPositioning::lpNone;
+					//BOOL largestPartOnly = FALSE;
+
+					// what is the basic geometry type
+					ShpfileType sfType;
+					sf->get_ShapefileType2D(&sfType);
+					if (sfType == ShpfileType::SHP_POINT)
+					{
+						//// center label below
+						//labelPos = tkLabelPositioning::lpCenter;
+						// use square frame
+						labels->put_FrameVisible(VARIANT_TRUE);
+						labels->put_FrameType(tkLabelFrameType::lfRectangle);
+						labels->put_FrameOutlineColor(0);
+						labels->put_InboxAlignment(tkLabelAlignment::laBottomCenter);
+						// labels
+						labels->put_Alignment(tkLabelAlignment::laCenter);
+						labels->put_AutoOffset(VARIANT_TRUE);
+					}
+					else if (sfType == ShpfileType::SHP_POLYLINE)
+					{
+						//// center label above longest segment
+						//largestPartOnly = TRUE;
+						//labelPos = tkLabelPositioning::lpLongestSegement;
+						// no frame
+						labels->put_FrameVisible(VARIANT_FALSE);
+						// labels
+						labels->put_Alignment(tkLabelAlignment::laTopCenter);
+						labels->put_AutoOffset(VARIANT_TRUE);
+					}
+					else if (sfType == ShpfileType::SHP_POLYGON)
+					{
+						//// center label
+						//labelPos = tkLabelPositioning::lpCentroid;
+						// no frame ?
+						labels->put_FrameVisible(VARIANT_FALSE);
+					}
+					//long fieldIndex = -1;
+					//long count = 0;
+					//CComBSTR bstrColName(strColumn);
+					//sf->get_FieldIndexByName(bstrColName.Copy(), &fieldIndex);
+					//sf->GenerateLabels(fieldIndex, labelPos, largestPartOnly, &count);
+
+				//	// release the reference
+				//	options->Release();
+				//}
+				// release Labels reference
+				labels->Release();
+			}
+		}
+	}
+}
+
+
+// ****************************************************************** 
+//		SetLayerLabelScaling
+// ****************************************************************** 
+void CMapView::SetLayerLabelScaling(LONG LayerHandle, LONG FontSize, DOUBLE RelativeScale)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// get Shapefile reference
+	IShapefile* sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// Labels reference
+		ILabels* labels = nullptr;
+		sf->get_Labels(&labels);
+		if (labels != nullptr)
+		{
+			//set up Font scaling
+			labels->put_ScaleLabels(VARIANT_TRUE);
+			labels->put_BasicScale(RelativeScale);
+			labels->put_FontSize(FontSize);
+
+			// release Labels reference
+			labels->Release();
+		}
+	}
+}
+
+
+// ****************************************************************** 
+//		SetLayerLabelHalo
+// ****************************************************************** 
+void CMapView::SetLayerLabelHalo(LONG LayerHandle, LONG HaloSize, LONG HaloColor)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// get Shapefile reference
+	IShapefile* sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// Labels reference
+		ILabels* labels = nullptr;
+		sf->get_Labels(&labels);
+		if (labels != nullptr)
+		{
+			labels->put_HaloVisible(VARIANT_TRUE);
+			labels->put_HaloSize(HaloSize);
+			labels->put_HaloColor(HaloColor);
+
+			// release Labels reference
+			labels->Release();
+		}
+	}
+}
+
+
+// ****************************************************************** 
+//		SetLayerLabelShadow
+// ****************************************************************** 
+void CMapView::SetLayerLabelShadow(LONG LayerHandle, LONG OffsetX, LONG OffsetY, LONG ShadowColor)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// get Shapefile reference
+	IShapefile* sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// Labels reference
+		ILabels* labels = nullptr;
+		sf->get_Labels(&labels);
+		if (labels != nullptr)
+		{
+			labels->put_ShadowVisible(VARIANT_TRUE);
+			labels->put_ShadowOffsetX(OffsetX);
+			labels->put_ShadowOffsetY(OffsetY);
+			labels->put_ShadowColor(ShadowColor);
+
+			// release Labels reference
+			labels->Release();
+		}
+	}
+}
+
+
+// ****************************************************************** 
+//		SetLayerLabelFont
+// ****************************************************************** 
+void CMapView::SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, LONG FontColor, BOOL FontBold, BOOL FontItalic)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// get Shapefile reference
+	IShapefile* sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// Labels reference
+		ILabels* labels = nullptr;
+		sf->get_Labels(&labels);
+		if (labels != nullptr)
+		{
+			// set Font attributes
+			CComBSTR bstr(FontName);
+			labels->put_FontName(bstr);
+			labels->put_FontSize(FontSize);
+			labels->put_FontColor(FontColor);
+			labels->put_FontBold(FontBold ? VARIANT_TRUE : VARIANT_FALSE);
+			labels->put_FontItalic(FontItalic ? VARIANT_TRUE : VARIANT_FALSE);
+
+			// release Labels reference
+			labels->Release();
+		}
+	}
+}
+
+
+// ****************************************************************** 
+//		GenerateLabels
+// ****************************************************************** 
+void CMapView::GenerateLayerLabels(LONG LayerHandle)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// get Shapefile reference
+	IShapefile* sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// Labels reference
+		ILabels* labels = nullptr;
+		sf->get_Labels(&labels);
+		if (labels != nullptr)
+		{
+			// label positioning
+			tkLabelPositioning labelPos = tkLabelPositioning::lpNone;
+			BOOL largestPartOnly = FALSE;
+			// what is the basic geometry type
+			ShpfileType sfType;
+			sf->get_ShapefileType2D(&sfType);
+			if (sfType == ShpfileType::SHP_POINT)
+			{
+				// center label below
+				labelPos = tkLabelPositioning::lpCenter;
+			}
+			else if (sfType == ShpfileType::SHP_POLYLINE)
+			{
+				// center label above longest segment
+				largestPartOnly = TRUE;
+				labelPos = tkLabelPositioning::lpLongestSegement;
+			}
+			else if (sfType == ShpfileType::SHP_POLYGON)
+			{
+				// center label
+				labelPos = tkLabelPositioning::lpCentroid;
+			}
+
+			// re-generate labels
+			long fieldIndex = -1;
+			long count = 0;
+			CString strColumn = _labelColumns[LayerHandle];
+			CComBSTR bstrColName(strColumn);
+			sf->get_FieldIndexByName(bstrColName.Copy(), &fieldIndex);
+			sf->GenerateLabels(fieldIndex, labelPos, largestPartOnly, &count);
+
+			// release Labels reference
+			labels->Release();
+		}
+	}
+}
+
+// ***************************************************************
+//		AddLayerAndResave()
+// ***************************************************************
+long CMapView::AddLayerAndResave(LPCTSTR Filename, BOOL visible)
+{
+	USES_CONVERSION;
+	IDispatch* layer = NULL;
+	CComBSTR bstr(Filename);
+	// open the file
+	_fileManager->Open(bstr,tkFileOpenStrategy::fosAutoDetect, _globalCallback, &layer);
+	if (layer) 
+	{
+		long handle = -1;
+		// get Shapefile interface
+		CComPtr<IShapefile> sf = NULL;
+		layer->QueryInterface(IID_IShapefile, (void**)&sf);
+		// is it a Shapefile ?
+		if (sf != NULL)
+		{
+			// see if projections differ before adding layer, since we would otherwise have to
+			// unload the layer to unlock it, save over it, then load it again...
+
+			// get the projections
+			CComPtr<IGeoProjection> gpMap = NULL;
+			CComPtr<IGeoProjection> gpLayer = NULL;
+			gpMap = this->GetGeoProjection();
+			sf->get_GeoProjection(&gpLayer);
+			// map may not have a projection yet...
+			VARIANT_BOOL isEmpty;
+			if (gpMap && (gpMap->get_IsEmpty(&isEmpty) == S_OK) && (isEmpty == VARIANT_FALSE))
+			{
+				// mismatch testing
+				Layer* lyr = new Layer();
+				lyr->set_Object(sf);
+				CComPtr<IExtents> bounds = NULL;
+				lyr->GetExtentsAsNewInstance(&bounds);
+				// do they differ?
+				if (!ProjectionHelper::IsSame(gpMap, gpLayer, bounds, 20))
+				{
+					// rename exising shapefile
+					CString sfName(Filename);
+					CString newName(sfName);
+					newName.MakeLower().Replace(".shp", ".original.shp");
+					CopyFile((LPCTSTR)sfName, (LPCTSTR)newName, TRUE);
+					// rename exising shx
+					sfName.Replace(".shp", ".shx");
+					newName = sfName;
+					newName.Replace(".shx", ".original.shx");
+					CopyFile((LPCTSTR)sfName, (LPCTSTR)newName, TRUE);
+					// rename exising dbf
+					sfName.Replace(".shx", ".dbf");
+					newName = sfName;
+					newName.Replace(".dbf", ".original.dbf");
+					CopyFile((LPCTSTR)sfName, (LPCTSTR)newName, TRUE);
+					// rename exising prj
+					sfName.Replace(".dbf", ".prj");
+					newName = sfName;
+					newName.Replace(".prj", ".original.prj");
+					CopyFile((LPCTSTR)sfName, (LPCTSTR)newName, TRUE);
+					Sleep(100);
+
+					// reproject to a new in-memory Shapefile
+					CComPtr<IShapefile> sfNew = NULL;
+					long count;
+					sf->Reproject(gpMap, &count, &sfNew);
+
+					// close and delete the originals
+					VARIANT_BOOL vb;
+					sf->Close(&vb);
+					layer->Release();
+					sfName = Filename;
+					sfName.MakeLower();
+					remove((LPCTSTR)sfName);
+					sfName.Replace(".shp", ".shx");
+					remove((LPCTSTR)sfName);
+					sfName.Replace(".shx", ".dbf");
+					remove((LPCTSTR)sfName);
+					sfName.Replace(".dbf", ".prj");
+					remove((LPCTSTR)sfName);
+					Sleep(100);
+
+					// now resave, to the original name, in the new projection
+					VARIANT_BOOL success;
+					sfNew->SaveAs(bstr, _globalCallback, &success);
+
+					bstr = Filename;
+					// open the reprojected file
+					_fileManager->Open(bstr, tkFileOpenStrategy::fosAutoDetect, _globalCallback, &layer);
+					if (layer == NULL) return -1;
+				}
+			}
+		}
+		// add to the map
+		handle = AddLayer(layer, visible);
+
+		// let it go
+		layer->Release();
+		return handle;
+	}
+	else 
+	{
+		// failed
+		return -1;
+	}
+}
 

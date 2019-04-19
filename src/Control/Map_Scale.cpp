@@ -1010,6 +1010,69 @@ void CMapView::CalculateVisibleExtents( Extent e, bool MapSizeChanged )
 	double xadjust = 0.0, yadjust = 0.0;
 	xextent = yextent = 0.0;
 	
+	// consider constraining extents
+	if (_useConstrainingExtents)
+	{
+		// specified max extents
+		Extent maxExt;
+		maxExt.left = _xMin;
+		maxExt.bottom = _yMin;
+		maxExt.right = _xMax;
+		maxExt.top = _yMax;
+		double maxWidth = maxExt.Width();
+		double maxHeight = maxExt.Height();
+		// newly intended extents
+		double newWidth = (right - left); // e.Width();
+		double newHeight = (top - bottom); // e.Height();
+										   //
+		bool extentsChanged = false;
+		if (newWidth > maxWidth || newHeight > maxHeight)
+		{
+			left = maxExt.left;
+			bottom = maxExt.bottom;
+			right = maxExt.right;
+			top = maxExt.top;
+			extentsChanged = true;
+		}
+		else
+		{
+			bool panning = (newWidth == maxWidth && newHeight == maxHeight);
+			if (left < maxExt.left)
+			{
+				left = maxExt.left;
+				//if (panning) right = left + newWidth;
+				right = left + newWidth;
+				extentsChanged = true;
+			}
+			else if (right > maxExt.right)
+			{
+				right = maxExt.right;
+				//if (panning) left = right - maxWidth;
+				left = right - newWidth;
+				extentsChanged = true;
+			}
+			if (bottom < maxExt.bottom)
+			{
+				bottom = maxExt.bottom;
+				//if (panning) top = bottom + maxHeight;
+				top = bottom + newHeight;
+				extentsChanged = true;
+			}
+			else if (top > maxExt.top)
+			{
+				top = maxExt.top;
+				//if (panning) bottom = top - maxHeight;
+				bottom = top - newHeight;
+				extentsChanged = true;
+			}
+		}
+		if (extentsChanged)
+		{
+			xrange = right - left;
+			yrange = top - bottom;
+		}
+	}
+
 	if (!MapSizeChanged && _mapResizeBehavior != rbWarp)
 	{
 		// size of control is the same, we need just to apply new extents
@@ -1113,6 +1176,7 @@ void CMapView::CalculateVisibleExtents( Extent e, bool MapSizeChanged )
 		yrange = top - bottom;
 	}
 	
+
 	// save new extents and recalculate scale
 	_extents.left = left;
 	_extents.right = right;

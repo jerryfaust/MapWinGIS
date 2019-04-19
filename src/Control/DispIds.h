@@ -3,6 +3,20 @@ enum {		//{{AFX_DISP_ID(CMapView)
 	// NOTE: ClassWizard will add and remove enumeration elements here
 	//    DO NOT EDIT what you see in these blocks of generated code !
 	// **ClassWizard is a thing of the past... feel free to edit this code.
+	dispidAddLayerAndResave = 282L,
+	dispidGenerateLayerLabels = 281L,
+	dispidSetLayerLabelFont = 280L,
+	dispidSetLayerLabelShadow = 279L,
+	dispidSetLayerLabelHalo = 278L,
+	dispidSetLayerLabelScaling = 277L,
+	dispidSetLayerLabelAttributes = 276L,
+	dispidSetLayerIDColumn = 275L,
+	dispidSetLayerLabelColumn = 274L,
+	dispidSetLayerLabelMinScale = 273L,
+	dispidSetLayerLabelMaxScale = 272L,
+	dispidFreezeCurrentExtents = 271L,
+	dispidSetConstrainingExtents = 270L,
+	//^^^ Swift API ^^^
 	dispidRecenterMapOnZoom = 262L,
 	dispidUseAlternatePanCursor = 261L,
 	dispidRedraw3 = 260L,
