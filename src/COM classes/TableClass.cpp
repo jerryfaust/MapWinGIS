@@ -1465,8 +1465,9 @@ bool CTableClass::WriteRecord(DBFInfo* dbfHandle, long fromRowIndex, long toRowI
         return false;
     
     char * nonstackString = NULL;
+	int maxCols = min(30, FieldCount());
 
-	for(long i = 0; i < FieldCount(); i++ )
+	for(long i = 0; i < maxCols; i++ )
 	{	
 		FieldType type = GetFieldType(i);				
     	long precision = GetFieldPrecision(i);

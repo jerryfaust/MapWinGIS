@@ -636,9 +636,10 @@ public:
 	afx_msg void SetLayerLabelScaling(LONG LayerHandle, LONG FontSize, DOUBLE RelativeScale);
 	afx_msg void SetLayerLabelHalo(LONG LayerHandle, LONG HaloSize, LONG HaloColor);
 	afx_msg void SetLayerLabelShadow(LONG LayerHandle, LONG OffsetX, LONG OffsetY, LONG ShadowColor);
-	afx_msg void SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, LONG FontColor, BOOL FontBold, BOOL FontItalic);
+	afx_msg void SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, LONG FontColor, BOOL FontBold, BOOL FontItalic, DOUBLE RelativeScale);
 	afx_msg void GenerateLayerLabels(LONG LayerHandle);
 	afx_msg long AddLayerAndResave(LPCTSTR Filename, BOOL visible);
+	afx_msg long AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, BOOL visible);
 
 #pragma endregion
 

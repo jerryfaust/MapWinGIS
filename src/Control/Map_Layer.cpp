@@ -241,12 +241,14 @@ long CMapView::AddLayerFromFilename(LPCTSTR Filename, tkFileOpenStrategy openStr
 	IDispatch* layer = NULL;
 	CComBSTR bstr(Filename);
 	_fileManager->Open(bstr, openStrategy, _globalCallback, &layer);
-	if (layer) {
+	if (layer) 
+	{
 		long handle = AddLayer(layer, visible);
 		layer->Release();
 		return handle;
 	}
-	else {
+	else 
+	{
 		return -1;
 	}
 }
@@ -2346,7 +2348,7 @@ void CMapView::SetLayerLabelShadow(LONG LayerHandle, LONG OffsetX, LONG OffsetY,
 // ****************************************************************** 
 //		SetLayerLabelFont
 // ****************************************************************** 
-void CMapView::SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, LONG FontColor, BOOL FontBold, BOOL FontItalic)
+void CMapView::SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, LONG FontColor, BOOL FontBold, BOOL FontItalic, DOUBLE RelativeScale)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -2366,6 +2368,14 @@ void CMapView::SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSi
 			labels->put_FontColor(FontColor);
 			labels->put_FontBold(FontBold ? VARIANT_TRUE : VARIANT_FALSE);
 			labels->put_FontItalic(FontItalic ? VARIANT_TRUE : VARIANT_FALSE);
+
+			// is scaling requested?
+			if (RelativeScale != 0.0)
+			{
+				//set up Font scaling
+				labels->put_ScaleLabels(VARIANT_TRUE);
+				labels->put_BasicScale(RelativeScale);
+			}
 
 			// release Labels reference
 			labels->Release();
@@ -2533,3 +2543,91 @@ long CMapView::AddLayerAndResave(LPCTSTR Filename, BOOL visible)
 	}
 }
 
+// ***************************************************************
+//		AddDatasourceAndResave()
+// ***************************************************************
+long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, BOOL visible)
+{
+	USES_CONVERSION;
+	long handle = -1;
+	IOgrLayer* layer = NULL;
+	CComBSTR bstrConnection(ConnectionString);
+	CComBSTR bstrTable(TableName);
+	// build Shapefile path
+
+	// if placing in parent directory
+	CString strDirectory(ConnectionString);
+	int pos = strDirectory.ReverseFind('\\');
+	strDirectory = strDirectory.Left(pos);
+	CComBSTR bstrShapefile((LPCTSTR)strDirectory);
+
+	// if placing in GDB directory
+	//CComBSTR bstrShapefile(ConnectionString);
+
+	bstrShapefile.Append("\\");
+	bstrShapefile.Append(bstrTable);
+	bstrShapefile.Append(".shp");
+
+	// does the Shapefile already exist?
+	handle = AddLayerFromFilename(CString(bstrShapefile), tkFileOpenStrategy::fosAutoDetect, visible);
+	if (handle >= 0) return handle;
+
+	// else continue on loading from database
+	_fileManager->OpenFromDatabase(bstrConnection, bstrTable, &layer);
+	if (layer) 
+	{
+		VARIANT_BOOL vbResult;
+		layer->get_SupportsEditing(tkOgrSaveType::ostSaveAll, &vbResult);
+		// for now, only if a GDB datasource
+		CString strConnStr(ConnectionString);
+		if (strConnStr.MakeLower().Find(".gdb") > 0)
+		{
+			// see if projections differ before adding layer, since we would otherwise have to
+			// unload the layer to unlock it, save over it, then load it again...
+
+			// get the projections
+			CComPtr<IGeoProjection> gpMap = NULL;
+			CComPtr<IGeoProjection> gpLayer = NULL;
+			gpMap = this->GetGeoProjection();
+			layer->get_GeoProjection(&gpLayer);
+			// map may not have a projection yet...
+			VARIANT_BOOL isEmpty;
+			if (gpMap && (gpMap->get_IsEmpty(&isEmpty) == S_OK) && (isEmpty == VARIANT_FALSE))
+			{
+				// mismatch testing
+				Layer* lyr = new Layer();
+				lyr->set_Object(layer);
+				CComPtr<IExtents> bounds = NULL;
+				lyr->GetExtentsAsNewInstance(&bounds);
+				// do they differ?
+				if (!ProjectionHelper::IsSame(gpMap, gpLayer, bounds, 20))
+				{
+					// get OGR layer as Shapefile
+					CComPtr<IShapefile> sf = NULL;
+					layer->GetBuffer(&sf);
+					// reproject to a new in-memory Shapefile
+					CComPtr<IShapefile> sfNew = NULL;
+					long count;
+					sf->Reproject(gpMap, &count, &sfNew);
+					// close original
+					VARIANT_BOOL vb;
+					sf->Close(&vb);
+					layer->Release();
+					// now save, to Shapefile of original name, in the new projection
+					VARIANT_BOOL success;
+					sfNew->SaveAs(bstrShapefile, _globalCallback, &success);
+					// add to map
+					handle = AddLayer(sfNew, visible);
+					return handle;
+				}
+			}
+		}
+		handle = AddLayer(layer, visible);
+		layer->Release();
+		return handle;
+	}
+	else 
+	{
+		return -1;
+	}
+}

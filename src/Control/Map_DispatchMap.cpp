@@ -301,9 +301,10 @@ BEGIN_DISPATCH_MAP(CMapView, COleControl)
 	DISP_FUNCTION_ID(CMapView, "SetLayerLabelScaling", dispidSetLayerLabelScaling, SetLayerLabelScaling, VT_EMPTY, VTS_I4 VTS_I4 VTS_R8)
 	DISP_FUNCTION_ID(CMapView, "SetLayerLabelHalo", dispidSetLayerLabelHalo, SetLayerLabelHalo, VT_EMPTY, VTS_I4 VTS_I4 VTS_I4)
 	DISP_FUNCTION_ID(CMapView, "SetLayerLabelShadow", dispidSetLayerLabelShadow, SetLayerLabelShadow, VT_EMPTY, VTS_I4 VTS_I4 VTS_I4 VTS_I4)
-	DISP_FUNCTION_ID(CMapView, "SetLayerLabelFont", dispidSetLayerLabelFont, SetLayerLabelFont, VT_EMPTY, VTS_I4 VTS_BSTR VTS_I4 VTS_I4 VTS_BOOL VTS_BOOL)
+	DISP_FUNCTION_ID(CMapView, "SetLayerLabelFont", dispidSetLayerLabelFont, SetLayerLabelFont, VT_EMPTY, VTS_I4 VTS_BSTR VTS_I4 VTS_I4 VTS_BOOL VTS_BOOL VTS_R8)
 	DISP_FUNCTION_ID(CMapView, "GenerateLayerLabels", dispidGenerateLayerLabels, GenerateLayerLabels, VT_EMPTY, VTS_I4)
 	DISP_FUNCTION_ID(CMapView, "AddLayerAndResave", dispidAddLayerAndResave, AddLayerAndResave, VT_I4, VTS_BSTR VTS_BOOL)
+	DISP_FUNCTION_ID(CMapView, "AddDatasourceAndResave", dispidAddDatasourceAndResave, AddDatasourceAndResave, VT_I4, VTS_BSTR VTS_BSTR VTS_BOOL)
 
 END_DISPATCH_MAP()
 //}}AFX_DISPATCH_MAP

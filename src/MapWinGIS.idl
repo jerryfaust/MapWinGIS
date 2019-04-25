@@ -7106,9 +7106,10 @@ library MapWinGIS
 			[id(277)] void SetLayerLabelScaling(LONG LayerHandle, LONG FontSize, DOUBLE RelativeScale);
 			[id(278)] void SetLayerLabelHalo(LONG LayerHandle, LONG HaloSize, LONG HaloColor);
 			[id(279)] void SetLayerLabelShadow(LONG LayerHandle, LONG OffsetX, LONG OffsetY, LONG ShadowColor);
-			[id(280)] void SetLayerLabelFont(LONG LayerHandle, BSTR FontName, LONG FontSize, LONG FontColor, VARIANT_BOOL FontBold, VARIANT_BOOL FontItalic);
+			[id(280)] void SetLayerLabelFont(LONG LayerHandle, BSTR FontName, LONG FontSize, LONG FontColor, VARIANT_BOOL FontBold, VARIANT_BOOL FontItalic, DOUBLE RelativeScale);
 			[id(281)] void GenerateLayerLabels(LONG LayerHandle);
 			[id(282)] LONG AddLayerAndResave(BSTR Filename, VARIANT_BOOL Visible);
+			[id(283)] LONG AddDatasourceAndResave(BSTR ConnectionString, BSTR TableName, VARIANT_BOOL Visible);
 
 #endif			
 
