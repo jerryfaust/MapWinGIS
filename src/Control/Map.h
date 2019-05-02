@@ -631,7 +631,7 @@ public:
 	afx_msg void SetLayerLabelMaxScale(LONG LayerHandle, DOUBLE maxScale);
 	afx_msg void SetLayerLabelMinScale(LONG LayerHandle, DOUBLE minScale);
 	afx_msg void SetLayerLabelColumn(LONG LayerHandle, LPCTSTR ColumnName);
-	afx_msg void SetLayerIDColumn(LONG LayerHandle, LPCTSTR ColumnName);
+	afx_msg void SetLayerFeatureColumn(LONG LayerHandle, LPCTSTR ColumnName);
 	afx_msg void SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, BOOL ScaledFonts);
 	afx_msg void SetLayerLabelScaling(LONG LayerHandle, LONG FontSize, DOUBLE RelativeScale);
 	afx_msg void SetLayerLabelHalo(LONG LayerHandle, LONG HaloSize, LONG HaloColor);
@@ -640,6 +640,9 @@ public:
 	afx_msg void GenerateLayerLabels(LONG LayerHandle);
 	afx_msg long AddLayerAndResave(LPCTSTR Filename, BOOL visible);
 	afx_msg long AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, BOOL visible);
+	afx_msg BSTR QueryLayer(LONG LayerHandle, LPCTSTR WhereClause);
+	afx_msg VARIANT_BOOL SetupVolatileLayers();
+	afx_msg long AddVolatilePoint(DOUBLE lon, DOUBLE lat);
 
 #pragma endregion
 
@@ -844,6 +847,7 @@ public:
 	double _xMin, _yMin, _xMax, _yMax;
 	// map LayerHandles to Label columns
 	std::map<long, CString> _labelColumns;
+	std::map<long, CString> _featureColumns;
 
 	tkCustomState _panningInertia;			
 	BOOL _reuseTileBuffer;			

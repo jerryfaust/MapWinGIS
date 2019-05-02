@@ -182,34 +182,6 @@ VARIANT_BOOL CMapView::GetRecenterMapOnZoom()
 	return _recenterMapOnZoom;
 }
 
-VARIANT_BOOL CMapView::SetConstrainingExtents(DOUBLE xMin, DOUBLE yMin, DOUBLE xMax, DOUBLE yMax)
-{
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	// save parameters
-	_xMin = xMin;
-	_yMin = yMin;
-	_xMax = xMax;
-	_yMax = yMax;
-	// turn it on
-	_useConstrainingExtents = TRUE;
-
-	return VARIANT_TRUE;
-}
-
-void CMapView::FreezeCurrentExtents()
-{
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	// save current extents
-	_xMin = _extents.left;
-	_yMin = _extents.bottom;
-	_xMax = _extents.right;
-	_yMax = _extents.top;
-	// turn it on
-	_useConstrainingExtents = TRUE;
-}
-
 // *************************************************************** //
 //		Setting/getting mouse wheel speed						   //
 // *************************************************************** //

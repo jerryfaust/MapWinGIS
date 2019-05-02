@@ -636,6 +636,7 @@ if $(PlatformName) == x64 setx  MapWinGISBin64 "$(OutputPath)"</Command>
     <ClCompile Include="Control\Map_Shapefile.cpp" />
     <ClCompile Include="Control\Map_Snapshot.cpp" />
     <ClCompile Include="Control\MapPpg.cpp" />
+    <ClCompile Include="Map_Swift.cpp" />
     <ClCompile Include="Ogr\GeosConverter.cpp" />
     <ClCompile Include="Ogr\GeosHelper.cpp" />
     <ClCompile Include="Ogr\Ogr2RawData.cpp" />

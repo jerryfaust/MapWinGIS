@@ -7101,7 +7101,7 @@ library MapWinGIS
 			[id(272)] void SetLayerLabelMaxScale(LONG LayerHandle, DOUBLE maxScale);
 			[id(273)] void SetLayerLabelMinScale(LONG LayerHandle, DOUBLE minScale);
 			[id(274)] void SetLayerLabelColumn(LONG LayerHandle, BSTR ColumnName);
-			[id(275)] void SetLayerIDColumn(LONG LayerHandle, BSTR ColumnName);
+			[id(275)] void SetLayerFeatureColumn(LONG LayerHandle, BSTR ColumnName);
 			[id(276)] void SetLayerLabelAttributes(LONG LayerHandle, BSTR FontName, LONG FontSize, VARIANT_BOOL ScaledFonts);
 			[id(277)] void SetLayerLabelScaling(LONG LayerHandle, LONG FontSize, DOUBLE RelativeScale);
 			[id(278)] void SetLayerLabelHalo(LONG LayerHandle, LONG HaloSize, LONG HaloColor);

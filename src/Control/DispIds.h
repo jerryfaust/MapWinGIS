@@ -3,6 +3,9 @@ enum {		//{{AFX_DISP_ID(CMapView)
 	// NOTE: ClassWizard will add and remove enumeration elements here
 	//    DO NOT EDIT what you see in these blocks of generated code !
 	// **ClassWizard is a thing of the past... feel free to edit this code.
+	dispidAddVolatilePoint = 286L,
+	dispidSetupVolatileLayers = 285L,
+	dispidQueryLayer = 284L,
 	dispidAddDatasourceAndResave = 283L,
 	dispidAddLayerAndResave = 282L,
 	dispidGenerateLayerLabels = 281L,
@@ -11,7 +14,7 @@ enum {		//{{AFX_DISP_ID(CMapView)
 	dispidSetLayerLabelHalo = 278L,
 	dispidSetLayerLabelScaling = 277L,
 	dispidSetLayerLabelAttributes = 276L,
-	dispidSetLayerIDColumn = 275L,
+	dispidSetLayerFeatureColumn = 275L,
 	dispidSetLayerLabelColumn = 274L,
 	dispidSetLayerLabelMinScale = 273L,
 	dispidSetLayerLabelMaxScale = 272L,
