@@ -306,8 +306,9 @@ BEGIN_DISPATCH_MAP(CMapView, COleControl)
 	DISP_FUNCTION_ID(CMapView, "AddLayerAndResave", dispidAddLayerAndResave, AddLayerAndResave, VT_I4, VTS_BSTR VTS_BOOL)
 	DISP_FUNCTION_ID(CMapView, "AddDatasourceAndResave", dispidAddDatasourceAndResave, AddDatasourceAndResave, VT_I4, VTS_BSTR VTS_BSTR VTS_BOOL)
 	DISP_FUNCTION_ID(CMapView, "QueryLayer", dispidQueryLayer, QueryLayer, VT_BSTR, VTS_I4 VTS_BSTR)
-	DISP_FUNCTION_ID(CMapView, "SetupVolatileLayers", dispidSetupVolatileLayers, SetupVolatileLayers, VT_BOOL, VTS_NONE)
-	DISP_FUNCTION_ID(CMapView, "AddVolatilePoint", dispidAddVolatilePoint, AddVolatilePoint, VT_I4, VTS_R8 VTS_R8)
+	DISP_FUNCTION_ID(CMapView, "AddVolatileLayer", dispidAddVolatileLayer, AddVolatileLayer, VT_I4, VTS_I4)
+	DISP_FUNCTION_ID(CMapView, "AddVolatilePoint", dispidAddVolatilePoint, AddVolatilePoint, VT_BSTR, VTS_R8 VTS_R8)
+	DISP_FUNCTION_ID(CMapView, "RemoveVolatilePoint", dispidRemoveVolatilePoint, RemoveVolatilePoint, VT_EMPTY, VTS_I4)
 
 END_DISPATCH_MAP()
 //}}AFX_DISPATCH_MAP

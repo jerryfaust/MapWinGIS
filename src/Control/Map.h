@@ -641,8 +641,9 @@ public:
 	afx_msg long AddLayerAndResave(LPCTSTR Filename, BOOL visible);
 	afx_msg long AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, BOOL visible);
 	afx_msg BSTR QueryLayer(LONG LayerHandle, LPCTSTR WhereClause);
-	afx_msg VARIANT_BOOL SetupVolatileLayers();
-	afx_msg long AddVolatilePoint(DOUBLE lon, DOUBLE lat);
+	afx_msg LONG AddVolatileLayer(LONG GeometryType);
+	afx_msg BSTR AddVolatilePoint(DOUBLE lon, DOUBLE lat);
+	afx_msg void RemoveVolatilePoint(LONG PointHandle);
 
 #pragma endregion
 

@@ -5,6 +5,25 @@
 #include "Map.h"
 #include "ComHelpers\ProjectionHelper.h"
 
+enum volatileLayerType
+{
+	vltPolygon = 1,
+	vltPolyline,
+	vltPoint
+};
+
+// volatile layer references
+long _PointLayerHandle = -1;
+long _PolylineLayerHandle = -1;
+long _PolygonLayerHandle = -1;
+CComPtr<IShapefile> _PointLayer = NULL;
+CComPtr<IShapefile> _PolylineLayer = NULL;
+CComPtr<IShapefile> _PolygonLayer = NULL;
+
+// reprojector, from WGS84 to the current map projection
+CComPtr<IGeoProjection> _WGS84 = NULL;
+
+
 VARIANT_BOOL CMapView::SetConstrainingExtents(DOUBLE xMin, DOUBLE yMin, DOUBLE xMax, DOUBLE yMax)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
@@ -709,72 +728,125 @@ BSTR CMapView::QueryLayer(LONG LayerHandle, LPCTSTR WhereClause)
 	return result;
 }
 
-// volatile layer references
-CComPtr<IShapefile> _PointLayer = NULL;
-long _PointLayerHandle = -1;
-CComPtr<IGeoProjection> _WGS84 = NULL;
-
 // ***************************************************************
-//		SetupVolatileLayers()
+//		AddVolatileLayer()
 // ***************************************************************
-VARIANT_BOOL CMapView::SetupVolatileLayers()
+LONG CMapView::AddVolatileLayer(LONG GeometryType)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	VARIANT_BOOL vb;
-	// set up Point layer
-	ComHelper::CreateInstance(idShapefile, (IDispatch**)&_PointLayer);
-	_PointLayer->CreateNew(CComBSTR(""), ShpfileType::SHP_POINT, &vb);
+	LONG layerHandle = -1;
+
+	// set up layer
+	switch ((volatileLayerType)GeometryType)
+	{
+	case vltPoint:
+		ComHelper::CreateInstance(idShapefile, (IDispatch**)&_PointLayer);
+		_PointLayer->CreateNew(CComBSTR(""), ShpfileType::SHP_POINT, &vb);
+		if (vb == VARIANT_TRUE)
+		{
+			_PointLayer->put_Volatile(VARIANT_TRUE);
+			_PointLayer->put_Selectable(VARIANT_TRUE);
+			// add layer to map
+			layerHandle = _PointLayerHandle = this->AddLayer((LPDISPATCH)_PointLayer, TRUE);
+			// rendering?
+			this->SetShapeLayerPointColor(_PointLayerHandle, 255);
+			this->SetShapeLayerPointSize(_PointLayerHandle, 10);
+		}
+		break;
+	case vltPolyline:
+		ComHelper::CreateInstance(idShapefile, (IDispatch**)&_PolylineLayer);
+		_PolylineLayer->CreateNew(CComBSTR(""), ShpfileType::SHP_POLYLINE, &vb);
+		if (vb == VARIANT_TRUE)
+		{
+			_PolylineLayer->put_Volatile(VARIANT_TRUE);
+			_PolylineLayer->put_Selectable(VARIANT_TRUE);
+			// add layer to map
+			layerHandle = _PolylineLayerHandle = this->AddLayer((LPDISPATCH)_PolylineLayer, TRUE);
+		}
+		break;
+	case vltPolygon:
+		ComHelper::CreateInstance(idShapefile, (IDispatch**)&_PolygonLayer);
+		_PolygonLayer->CreateNew(CComBSTR(""), ShpfileType::SHP_POLYGON, &vb);
+		if (vb == VARIANT_TRUE)
+		{
+			_PolygonLayer->put_Volatile(VARIANT_TRUE);
+			_PolygonLayer->put_Selectable(VARIANT_TRUE);
+			// add layer to map
+			layerHandle = _PolygonLayerHandle = this->AddLayer((LPDISPATCH)_PolygonLayer, TRUE);
+		}
+		break;
+	default:
+		break;
+	}
 	if (vb == VARIANT_TRUE)
 	{
-		_PointLayer->put_Volatile(VARIANT_TRUE);
-		_PointLayer->put_Selectable(VARIANT_TRUE);
-		// set up projection for transformations
-		//CComPtr<IGeoProjection> gpWGS84 = NULL;
-		ComHelper::CreateInstance(idGeoProjection, (IDispatch**)&_WGS84);
-		_WGS84->SetWgs84(&vb);
-		_WGS84->StartTransform(this->GetGeoProjection(), &vb);
-		//_PointLayer->put_GeoProjection(gp);
-		// add to map
-		_PointLayerHandle = this->AddLayer((LPDISPATCH)_PointLayer, TRUE);
-		// rendering?
-		this->SetShapeLayerPointColor(_PointLayerHandle, 255);
-		this->SetShapeLayerPointSize(_PointLayerHandle, 10);
+		// one-time set up of projection for transformations
+		if (!_WGS84)
+		{
+			ComHelper::CreateInstance(idGeoProjection, (IDispatch**)&_WGS84);
+			_WGS84->SetWgs84(&vb);
+			_WGS84->StartTransform(this->GetGeoProjection(), &vb);
+		}
 
-		return VARIANT_TRUE;
+		return layerHandle;
 	}
 	// if we get here, something went wrong
-	return VARIANT_FALSE;
+	return -1;
 }
 
 // ***************************************************************
 //		AddVolatilePoint()
 // ***************************************************************
-LONG CMapView::AddVolatilePoint(DOUBLE lon, DOUBLE lat)
+BSTR CMapView::AddVolatilePoint(DOUBLE lon, DOUBLE lat)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
-	// create layer if necessary
-	if (!_PointLayer && SetupVolatileLayers() == VARIANT_FALSE)
+	if (!_PointLayer)
 	{
-		// could not create the layers
-		return -1;
+		CComBSTR msg("Volatile Layer does not yet exist");
+		return msg;
 	}
 
 	VARIANT_BOOL vb;
 	long idx;
-	// reproject
-	_WGS84->Transform(&lon, &lat, &vb);
 	// create Point Shape
 	CComPtr<IShape> pShape = NULL;
 	ComHelper::CreateShape(&pShape);
 	pShape->Create(ShpfileType::SHP_POINT, &vb);
+	// set lon, lat for creation of WKT
 	pShape->AddPoint(lon, lat, &idx);
 	CComBSTR bstrWKT;
 	pShape->ExportToWKT(&bstrWKT);
+	// now reproject to map projection
+	_WGS84->Transform(&lon, &lat, &vb);
+	// update point shape
+	pShape->put_XY(0, lon, lat, &vb);
 	// add to Layer
 	_PointLayer->EditAddShape(pShape, &idx);
 	_PointLayer->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
-	// return handle (points are 100-based)
-	return (100 + idx);
+	// return string with point_handle, WKT of point
+	CString strResult;
+	strResult.Format("%d%s%s", idx, "\037", CString(bstrWKT));
+	CComBSTR bstrResult((LPCTSTR)strResult);
+	return bstrResult;
+}
+
+// ***************************************************************
+//		RemoveVolatilePoint()
+// ***************************************************************
+void CMapView::RemoveVolatilePoint(LONG PointHandle)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	VARIANT_BOOL vb;
+	LONG count;
+	// layer must exist and point index must exist
+	if (_PointLayer && (_PointLayer->get_NumShapes(&count) == S_OK) && (count > PointHandle))
+	{
+		_PointLayer->EditDeleteShape(PointHandle, &vb);
+		if (vb == VARIANT_TRUE)
+			_PointLayer->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
+	}
 }
