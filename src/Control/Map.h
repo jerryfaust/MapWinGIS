@@ -641,9 +641,11 @@ public:
 	afx_msg long AddLayerAndResave(LPCTSTR Filename, BOOL visible);
 	afx_msg long AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, BOOL visible);
 	afx_msg BSTR QueryLayer(LONG LayerHandle, LPCTSTR WhereClause);
-	afx_msg LONG AddVolatileLayer(LONG GeometryType);
-	afx_msg BSTR AddVolatilePoint(DOUBLE lon, DOUBLE lat);
+	afx_msg LONG AddVolatileLayer(LONG GeometryType, BOOL Visible);
+	afx_msg BSTR AddVolatilePoint(DOUBLE Lon, DOUBLE Lat);
 	afx_msg void RemoveVolatilePoint(LONG PointHandle);
+	afx_msg BSTR GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLayerHandle, LONG VolatileGeomHandle);
+	afx_msg void SetSearchTolerance(DOUBLE Tolerance);
 
 #pragma endregion
 
@@ -848,7 +850,8 @@ public:
 	double _xMin, _yMin, _xMax, _yMax;
 	// map LayerHandles to Label columns
 	std::map<long, CString> _labelColumns;
-	std::map<long, CString> _featureColumns;
+	// vector of field indices by layer handle
+	std::map<long, vector<long>> _featureColumns;
 
 	tkCustomState _panningInertia;			
 	BOOL _reuseTileBuffer;			

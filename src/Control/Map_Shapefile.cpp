@@ -289,8 +289,8 @@ short CMapView::GetShapeLayerPointType(long LayerHandle)
 	CDrawingOptionsEx* options = get_ShapefileDrawingOptions(LayerHandle);
 	if (options)
 	{
-		ErrorMessage(tkPROPERTY_NOT_IMPLEMENTED);	// TODO: write conversions between point types
-		return ptSquare;
+		//ErrorMessage(tkPROPERTY_NOT_IMPLEMENTED);	// TODO: write conversions between point types
+		return options->pointShapeType;
 	}
 	else
 		return 0;
@@ -304,9 +304,19 @@ void CMapView::SetShapeLayerPointType(long LayerHandle, short nNewValue)
 	CDrawingOptionsEx* options = get_ShapefileDrawingOptions(LayerHandle);
 	if (options)
 	{
-		ErrorMessage(tkPROPERTY_NOT_IMPLEMENTED);	// TODO: write conversions between point types	
+		ShpfileType type = this->get_ShapefileType(LayerHandle);
+		if (type == SHP_POINT || type == SHP_POINTM || type == SHP_POINTZ ||
+			type == SHP_MULTIPOINT || type == SHP_MULTIPOINTZ || type == SHP_MULTIPOINTM)
+		{
+			options->pointShapeType = (tkPointShapeType)(nNewValue > 5 ? 0 : nNewValue);
+		}
+		else
+		{
+			options->verticesType = (tkVertexType)(nNewValue == 0 ? 0 : 1);
+		}
+		ScheduleLayerRedraw();
 	}
-}	
+}
 
 // *****************************************************************
 //		GetShapeLayerPointColor()
