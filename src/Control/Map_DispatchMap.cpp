@@ -308,9 +308,10 @@ BEGIN_DISPATCH_MAP(CMapView, COleControl)
 	DISP_FUNCTION_ID(CMapView, "QueryLayer", dispidQueryLayer, QueryLayer, VT_BSTR, VTS_I4 VTS_BSTR)
 	DISP_FUNCTION_ID(CMapView, "AddVolatileLayer", dispidAddVolatileLayer, AddVolatileLayer, VT_I4, VTS_I4 VTS_BOOL)
 	DISP_FUNCTION_ID(CMapView, "AddVolatilePoint", dispidAddVolatilePoint, AddVolatilePoint, VT_BSTR, VTS_R8 VTS_R8)
-	DISP_FUNCTION_ID(CMapView, "RemoveVolatilePoint", dispidRemoveVolatilePoint, RemoveVolatilePoint, VT_EMPTY, VTS_I4)
+	DISP_FUNCTION_ID(CMapView, "RemoveVolatileGeometry", dispidRemoveVolatileGeometry, RemoveVolatileGeometry, VT_EMPTY, VTS_I4 VTS_I4)
 	DISP_FUNCTION_ID(CMapView, "GetLayerFeatureByGeometry", dispidGetLayerFeatureByGeometry, GetLayerFeatureByGeometry, VT_BSTR, VTS_I4 VTS_I4 VTS_I4)
 	DISP_FUNCTION_ID(CMapView, "SetSearchTolerance", dispidSetSearchTolerance, SetSearchTolerance, VT_EMPTY, VTS_R8)
+	DISP_FUNCTION_ID(CMapView, "AddVolatileCircle", dispidAddVolatileCircle, AddVolatileCircle, VT_BSTR, VTS_R8 VTS_R8 VTS_R8)
 
 END_DISPATCH_MAP()
 //}}AFX_DISPATCH_MAP

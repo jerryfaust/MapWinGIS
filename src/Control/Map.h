@@ -643,9 +643,10 @@ public:
 	afx_msg BSTR QueryLayer(LONG LayerHandle, LPCTSTR WhereClause);
 	afx_msg LONG AddVolatileLayer(LONG GeometryType, BOOL Visible);
 	afx_msg BSTR AddVolatilePoint(DOUBLE Lon, DOUBLE Lat);
-	afx_msg void RemoveVolatilePoint(LONG PointHandle);
+	afx_msg void RemoveVolatileGeometry(LONG LayerHandle, LONG GeomHandle);
 	afx_msg BSTR GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLayerHandle, LONG VolatileGeomHandle);
 	afx_msg void SetSearchTolerance(DOUBLE Tolerance);
+	afx_msg BSTR AddVolatileCircle(DOUBLE Lon, DOUBLE Lat, DOUBLE Radius);
 
 #pragma endregion
 

@@ -148,11 +148,11 @@ void CMapView::SetLayerFeatureColumn(LONG LayerHandle, LPCTSTR ColumnName)
 	CComPtr<IShapefile> sf = this->GetShapefile(LayerHandle);
 	if (sf)
 	{
-		long fieldIndex;
-		// save feature columns (unpack into field indices)
-		CString strColumns(ColumnName);
+		long fieldIndex = -1;
+		// save feature columns (unpack into field indices
+		CAtlString strColumns(ColumnName);
 		// is it a single or multi-field label?
-		if (strColumns.Find('\037') < 0)
+		if (strColumns.Find("\x1F") < 0)
 		{
 			// single-field labeling
 			CComBSTR bstrColName(strColumns);
@@ -162,15 +162,15 @@ void CMapView::SetLayerFeatureColumn(LONG LayerHandle, LPCTSTR ColumnName)
 		else
 		{
 			// multi-field labeling
-			int tokenPos;
-			CString strToken = strColumns.Tokenize("\037", tokenPos);
+			int tokenPos = 0;
+			CAtlString strToken = strColumns.Tokenize("\x1F", tokenPos);
 			while (!strToken.IsEmpty())
 			{
 				CComBSTR bstrColName(strToken);
 				sf->get_FieldIndexByName(bstrColName.Copy(), &fieldIndex);
 				_featureColumns[LayerHandle].push_back(fieldIndex);
 				// next?
-				strToken = strColumns.Tokenize("\037", tokenPos);
+				strToken = strColumns.Tokenize("\x1F", tokenPos);
 			}
 		}
 	}
@@ -185,7 +185,7 @@ void CMapView::SetLayerLabelColumn(LONG LayerHandle, LPCTSTR ColumnName)
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	// save label columns
-	_labelColumns[LayerHandle] = CString(ColumnName);
+	_labelColumns[LayerHandle] = CAtlString(ColumnName);
 	// pass on to SetLayerLabelAttributes
 	SetLayerLabelAttributes(LayerHandle, "Arial", 10, FALSE);
 }
@@ -199,7 +199,7 @@ void CMapView::SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG 
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	// make sure we have the Label column name
-	CString strColumn = _labelColumns[LayerHandle];
+	CAtlString strColumn = _labelColumns[LayerHandle];
 	if (strColumn.GetLength() > 0)
 	{
 		// set up Labeling
@@ -412,11 +412,11 @@ void CMapView::SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSi
 }
 
 // local helper function
-CString BuildLabelExpression(CString input)
+CAtlString BuildLabelExpression(CAtlString input)
 {
-	CString exp;
+	CAtlString exp;
 	int tokenPos = 0;
-	CString strToken = input.Tokenize("\037", tokenPos);
+	CAtlString strToken = input.Tokenize("\037", tokenPos);
 	while (!strToken.IsEmpty())
 	{
 		// watch for secondary '+' separator, which indicates
@@ -431,7 +431,7 @@ CString BuildLabelExpression(CString input)
 
 			int plusPos = 0;
 			// now process plus-separated tokens
-			CString strPlus = strToken.Tokenize("+", plusPos);
+			CAtlString strPlus = strToken.Tokenize("+", plusPos);
 			while (!strPlus.IsEmpty())
 			{
 				// if empty, add first field value
@@ -504,7 +504,7 @@ void CMapView::GenerateLayerLabels(LONG LayerHandle)
 			// re-generate labels
 			long fieldIndex = -1;
 			long count = 0;
-			CString strColumn = _labelColumns[LayerHandle];
+			CAtlString strColumn = _labelColumns[LayerHandle];
 			// is it a single or multi-field label?
 			if (strColumn.Find('\037') < 0)
 			{
@@ -516,7 +516,7 @@ void CMapView::GenerateLayerLabels(LONG LayerHandle)
 			else
 			{
 				// multi-field labeling
-				CString strExpr = BuildLabelExpression(strColumn);
+				CAtlString strExpr = BuildLabelExpression(strColumn);
 				CComBSTR bstrExpr(strExpr);
 				labels->Generate(bstrExpr, labelPos, largestPartOnly, &count);
 			}
@@ -569,8 +569,8 @@ long CMapView::AddLayerAndResave(LPCTSTR Filename, BOOL visible)
 				if (!ProjectionHelper::IsSame(gpMap, gpLayer, bounds, 20))
 				{
 					// rename exising shapefile
-					CString sfName(Filename);
-					CString newName(sfName);
+					CAtlString sfName(Filename);
+					CAtlString newName(sfName);
 					newName.MakeLower().Replace(".shp", ".original.shp");
 					CopyFile((LPCTSTR)sfName, (LPCTSTR)newName, TRUE);
 					// rename exising shx
@@ -650,7 +650,7 @@ long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableNam
 	// build Shapefile path
 
 	// if placing in parent directory
-	CString strDirectory(ConnectionString);
+	CAtlString strDirectory(ConnectionString);
 	int pos = strDirectory.ReverseFind('\\');
 	strDirectory = strDirectory.Left(pos);
 	CComBSTR bstrShapefile((LPCTSTR)strDirectory);
@@ -663,7 +663,7 @@ long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableNam
 	bstrShapefile.Append(".shp");
 
 	// does the Shapefile already exist?
-	handle = AddLayerFromFilename(CString(bstrShapefile), tkFileOpenStrategy::fosAutoDetect, visible);
+	handle = AddLayerFromFilename(CAtlString(bstrShapefile), tkFileOpenStrategy::fosAutoDetect, visible);
 	if (handle >= 0) return handle;
 
 	// else continue on loading from database
@@ -673,7 +673,7 @@ long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableNam
 		VARIANT_BOOL vbResult;
 		layer->get_SupportsEditing(tkOgrSaveType::ostSaveAll, &vbResult);
 		// for now, only if a GDB datasource
-		CString strConnStr(ConnectionString);
+		CAtlString strConnStr(ConnectionString);
 		if (strConnStr.MakeLower().Find(".gdb") > 0)
 		{
 			// see if projections differ before adding layer, since we would otherwise have to
@@ -733,7 +733,8 @@ BSTR CMapView::QueryLayer(LONG LayerHandle, LPCTSTR WhereClause)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
-	CComBSTR result;
+	CAtlString strResult("Query Results");
+	CComBSTR result("Query Results");
 
 	IShapefile* sf = GetShapefile(LayerHandle);
 	if (sf)
@@ -754,7 +755,8 @@ BSTR CMapView::QueryLayer(LONG LayerHandle, LPCTSTR WhereClause)
 		}
 	}
 
-	return result;
+	//return result;
+	return A2BSTR((LPCTSTR)strResult);
 }
 
 // ***************************************************************
@@ -791,7 +793,8 @@ LONG CMapView::AddVolatileLayer(LONG GeometryType, BOOL Visible)
 			layerHandle = _PointLayerHandle = this->AddLayer((LPDISPATCH)_PointLayer, Visible);
 			// rendering?
 			this->SetShapeLayerPointColor(_PointLayerHandle, 255);
-			this->SetShapeLayerPointSize(_PointLayerHandle, 10);
+			this->SetShapeLayerPointSize(_PointLayerHandle, 14);
+			this->SetShapeLayerPointType(_PointLayerHandle, 2); // star
 		}
 		break;
 	case vltPolyline:
@@ -814,6 +817,10 @@ LONG CMapView::AddVolatileLayer(LONG GeometryType, BOOL Visible)
 			_PolygonLayer->put_Selectable(VARIANT_TRUE);
 			// add layer to map
 			layerHandle = _PolygonLayerHandle = this->AddLayer((LPDISPATCH)_PolygonLayer, Visible);
+			// rendering?
+			this->SetShapeLayerLineColor(_PolygonLayerHandle, 0xFFFF00);
+			this->SetShapeLayerFillColor(_PolygonLayerHandle, 0xFFFF00);
+			this->SetShapeLayerFillTransparency(_PolygonLayerHandle, .30);
 		}
 		break;
 	default:
@@ -844,7 +851,7 @@ BSTR CMapView::AddVolatilePoint(DOUBLE Lon, DOUBLE Lat)
 
 	if (!_PointLayer)
 	{
-		CComBSTR msg("Volatile Layer does not yet exist");
+		CComBSTR msg("Volatile Point Layer does not yet exist");
 		return msg;
 	}
 
@@ -866,28 +873,84 @@ BSTR CMapView::AddVolatilePoint(DOUBLE Lon, DOUBLE Lat)
 	_PointLayer->EditAddShape(pShape, &idx);
 	_PointLayer->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
 	// return string with point_handle, WKT of point
-	CString strResult;
-	strResult.Format("%d%s%s", idx, "\037", CString(bstrWKT));
+	CAtlString strResult;
+	strResult.Format("%d%s%s", idx, "\037", CAtlString(bstrWKT));
 	CComBSTR bstrResult((LPCTSTR)strResult);
 	return bstrResult;
 }
 
 // ***************************************************************
-//		RemoveVolatilePoint()
+//		RemoveVolatileGeometry()
 // ***************************************************************
-void CMapView::RemoveVolatilePoint(LONG PointHandle)
+void CMapView::RemoveVolatileGeometry(LONG LayerHandle, LONG GeomHandle)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	VARIANT_BOOL vb;
 	LONG count;
-	// layer must exist and point index must exist
-	if (_PointLayer && (_PointLayer->get_NumShapes(&count) == S_OK) && (count > PointHandle))
+
+	IShapefile* sf = GetShapefile(LayerHandle);
+	if (sf)
 	{
-		_PointLayer->EditDeleteShape(PointHandle, &vb);
-		if (vb == VARIANT_TRUE)
-			_PointLayer->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
+		// layer must exist and point index must exist
+		if (sf && (sf->get_NumShapes(&count) == S_OK) && (count > GeomHandle))
+		{
+			sf->EditDeleteShape(GeomHandle, &vb);
+			if (vb == VARIANT_TRUE)
+				sf->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
+		}
 	}
+}
+
+// ***************************************************************
+//		AddVolatilePoint()
+// ***************************************************************
+BSTR CMapView::AddVolatileCircle(DOUBLE Lon, DOUBLE Lat, DOUBLE Radius)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	if (!_PolygonLayer)
+	{
+		CComBSTR msg("Volatile Polygon Layer does not yet exist");
+		return msg;
+	}
+
+	VARIANT_BOOL vb;
+	long idx;
+	// create Polygon Shape
+	CComPtr<IShape> pShape = NULL;
+	ComHelper::CreateShape(&pShape);
+	pShape->Create(ShpfileType::SHP_POLYGON, &vb);
+	// radians conversion
+	double radians = (2.0 * 3.14159265359 / 90.0);
+	// circle will be a clockwise polygon of points
+	for (int i = 0; i <= 90; i++)
+	{
+		pShape->AddPoint(Lon + Radius * cos(i * radians), Lat - Radius * sin(i * radians), &idx);
+	}
+	// reset the last point to the first point, since mathematically, they are not quite equal
+	double x, y;
+	pShape->get_XY(0, &x, &y, &vb);
+	pShape->put_XY(90, x, y, &vb);
+
+	CComBSTR bstrWKT;
+	//pShape->ExportToWKT(&bstrWKT);
+	//// now reproject to map projection
+	//for (int i = 0; i <= 90; i++)
+	//{
+	//	pShape->get_XY(i, &x, &y, &vb);
+	//	_WGS84->Transform(&x, &y, &vb);
+	//	pShape->put_XY(i, x, y, &vb);
+	//}
+
+	// add to Layer
+	_PolygonLayer->EditAddShape(pShape, &idx);
+	_PolygonLayer->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
+	// return string with point_handle, WKT of point
+	CAtlString strResult;
+	strResult.Format("%d%s%s", idx, "\037", CAtlString(bstrWKT));
+	CComBSTR bstrResult((LPCTSTR)strResult);
+	return bstrResult;
 }
 
 // ***************************************************************
@@ -897,24 +960,32 @@ BSTR CMapView::GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLa
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
-	CString strResult;
+	CAtlString strResult;
+	tkSpatialRelation relation = tkSpatialRelation::srIntersects;
+
 	// make sure we've got the Search layer
 	CComPtr<IShapefile> sLayer = this->GetShapefile(SearchLayerHandle);
 	if (!sLayer)
+	{
 		strResult.Format("Search layer with handle = '%d' not found", SearchLayerHandle);
+	}
 	else
 	{
 		// make sure we've got the Volatile geometry
 		CComPtr<IShapefile> vLayer = this->GetShapefile(VolatileLayerHandle);
 		if (!vLayer)
+		{
 			strResult.Format("Volatile layer with handle = '%d' not found", VolatileLayerHandle);
+		}
 		else
 		{
 			// and make sure we've got the search Geometry
 			CComPtr<IShape> vShape = NULL;
 			vLayer->get_Shape(VolatileGeomHandle, &vShape);
 			if (!vShape)
+			{
 				strResult.Format("Geometry with handle = '%d' not found", VolatileGeomHandle);
+			}
 			else
 			{
 				long idx;
@@ -922,10 +993,11 @@ BSTR CMapView::GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLa
 				ShpfileType sfType;
 				CComPtr<IShape> bufferedShape = NULL;
 				CComPtr<IShapefile> defLayer;
+				// create 'definition' layer
 				ComHelper::CreateInstance(idShapefile, (IDispatch**)&defLayer);
 				defLayer->CreateNew(L"", ShpfileType::SHP_POLYGON, &vb);
 				defLayer->StartEditingShapes(VARIANT_TRUE, NULL, &vb);
-				// if search geometry is a point, create a buffer around it
+				// if definition geometry is a point, create a buffer around it
 				if ((vShape->get_ShapeType(&sfType) == S_OK) && (sfType == ShpfileType::SHP_POINT))
 				{
 					// add buffer
@@ -935,12 +1007,27 @@ BSTR CMapView::GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLa
 				}
 				else
 				{
-					// add 2D geometry to layer
+					// else just add 2D geometry to layer
 					defLayer->EditAddShape(vShape, &idx);
 				}
-				// save
+				// save to definition layer
 				defLayer->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
+
 				CComVariant sResults;
+				//// relation depends on searched geometry
+				//ShpfileType sShapeType;
+				//sLayer->get_ShapefileType2D(&sShapeType);
+				//switch (sShapeType)
+				//{
+				//case ShpfileType::SHP_POINT:
+				//	break;
+				//case ShpfileType::SHP_POLYLINE:
+				//	break;
+				//case ShpfileType::SHP_POLYGON:
+				//	break;
+				//default:
+				//	break;
+				//}
 				// try the select
 				sLayer->SelectByShapefile(defLayer, tkSpatialRelation::srIntersects, VARIANT_FALSE, &sResults, NULL, &vb);
 				if (vb == VARIANT_TRUE)
@@ -954,22 +1041,30 @@ BSTR CMapView::GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLa
 					{
 						// iterate list of field indexes
 						CComVariant sValue;
-						for (long idx = 0; idx < _featureColumns[SearchLayerHandle].size(); idx++)
+						for (long idx = 0; idx < (_featureColumns[SearchLayerHandle]).size(); idx++)
 						{
-							sLayer->get_CellValue(_featureColumns[SearchLayerHandle].at(idx), (long)(pData[i]), &sValue);
-							CString val(sValue);
+							sLayer->get_CellValue((_featureColumns[SearchLayerHandle]).at(idx), (long)(pData[i]), &sValue);
+							CAtlString val(sValue);
 							if (strResult.GetLength() == 0)
+							{
 								strResult = val;
+							}
 							else
+							{
 								strResult.Format("%s%s%s", strResult, "\037", val);
+							}
 						}
+						// if not on last entry, add ch30 separator
+						if (i < uBound) strResult.Append("\036");
 					}
 				}
 			}
 		}
 	}
 	// return results
-	CComBSTR bstrResult((LPCTSTR)strResult);
-	return bstrResult;
+	//CComBSTR bstrResult((LPCTSTR)strResult);
+	//return bstrResult;
+	return strResult.AllocSysString();
+	//return A2BSTR((LPCTSTR)strResult);
 }
 

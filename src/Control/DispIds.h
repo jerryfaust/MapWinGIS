@@ -3,9 +3,10 @@ enum {		//{{AFX_DISP_ID(CMapView)
 	// NOTE: ClassWizard will add and remove enumeration elements here
 	//    DO NOT EDIT what you see in these blocks of generated code !
 	// **ClassWizard is a thing of the past... feel free to edit this code.
+	dispidAddVolatileCircle = 290L,
 	dispidSetSearchTolerance = 289L,
 	dispidGetLayerFeatureByGeometry = 288L,
-	dispidRemoveVolatilePoint = 287L,
+	dispidRemoveVolatileGeometry = 287L,
 	dispidAddVolatilePoint = 286L,
 	dispidAddVolatileLayer = 285L,
 	dispidQueryLayer = 284L,
