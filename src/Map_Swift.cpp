@@ -770,57 +770,58 @@ void CMapView::SetSearchTolerance(DOUBLE Tolerance)
 }
 
 // ***************************************************************
-//		AddVolatileLayer()
+//		AddUserLayer()
 // ***************************************************************
-LONG CMapView::AddVolatileLayer(LONG GeometryType, BOOL Visible)
+LONG CMapView::AddUserLayer(LONG GeometryType, BOOL Visible)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	VARIANT_BOOL vb;
 	LONG layerHandle = -1;
+	CComPtr<IShapefile> sf = NULL;
 
 	// set up layer
 	switch ((volatileLayerType)GeometryType)
 	{
 	case vltPoint:
-		ComHelper::CreateInstance(idShapefile, (IDispatch**)&_PointLayer);
-		_PointLayer->CreateNew(CComBSTR(""), ShpfileType::SHP_POINT, &vb);
+		ComHelper::CreateInstance(idShapefile, (IDispatch**)&sf);
+		sf->CreateNew(CComBSTR(""), ShpfileType::SHP_POINT, &vb);
 		if (vb == VARIANT_TRUE)
 		{
-			_PointLayer->put_Volatile(VARIANT_TRUE);
-			_PointLayer->put_Selectable(VARIANT_TRUE);
+			sf->put_Volatile(VARIANT_TRUE);
+			sf->put_Selectable(VARIANT_TRUE);
 			// add layer to map
-			layerHandle = _PointLayerHandle = this->AddLayer((LPDISPATCH)_PointLayer, Visible);
-			// rendering?
-			this->SetShapeLayerPointColor(_PointLayerHandle, 255);
-			this->SetShapeLayerPointSize(_PointLayerHandle, 14);
-			this->SetShapeLayerPointType(_PointLayerHandle, 2); // star
+			layerHandle = this->AddLayer((LPDISPATCH)sf, Visible);
+			// default rendering?
+			this->SetShapeLayerPointColor(layerHandle, 255);
+			this->SetShapeLayerPointSize(layerHandle, 14);
+			this->SetShapeLayerPointType(layerHandle, 2); // star
 		}
 		break;
 	case vltPolyline:
-		ComHelper::CreateInstance(idShapefile, (IDispatch**)&_PolylineLayer);
-		_PolylineLayer->CreateNew(CComBSTR(""), ShpfileType::SHP_POLYLINE, &vb);
+		ComHelper::CreateInstance(idShapefile, (IDispatch**)&sf);
+		sf->CreateNew(CComBSTR(""), ShpfileType::SHP_POLYLINE, &vb);
 		if (vb == VARIANT_TRUE)
 		{
-			_PolylineLayer->put_Volatile(VARIANT_TRUE);
-			_PolylineLayer->put_Selectable(VARIANT_TRUE);
+			sf->put_Volatile(VARIANT_TRUE);
+			sf->put_Selectable(VARIANT_TRUE);
 			// add layer to map
-			layerHandle = _PolylineLayerHandle = this->AddLayer((LPDISPATCH)_PolylineLayer, Visible);
+			layerHandle = this->AddLayer((LPDISPATCH)sf, Visible);
 		}
 		break;
 	case vltPolygon:
-		ComHelper::CreateInstance(idShapefile, (IDispatch**)&_PolygonLayer);
-		_PolygonLayer->CreateNew(CComBSTR(""), ShpfileType::SHP_POLYGON, &vb);
+		ComHelper::CreateInstance(idShapefile, (IDispatch**)&sf);
+		sf->CreateNew(CComBSTR(""), ShpfileType::SHP_POLYGON, &vb);
 		if (vb == VARIANT_TRUE)
 		{
-			_PolygonLayer->put_Volatile(VARIANT_TRUE);
-			_PolygonLayer->put_Selectable(VARIANT_TRUE);
+			sf->put_Volatile(VARIANT_TRUE);
+			sf->put_Selectable(VARIANT_TRUE);
 			// add layer to map
-			layerHandle = _PolygonLayerHandle = this->AddLayer((LPDISPATCH)_PolygonLayer, Visible);
-			// rendering?
-			this->SetShapeLayerLineColor(_PolygonLayerHandle, 0xFFFF00);
-			this->SetShapeLayerFillColor(_PolygonLayerHandle, 0xFFFF00);
-			this->SetShapeLayerFillTransparency(_PolygonLayerHandle, .30);
+			layerHandle = this->AddLayer((LPDISPATCH)sf, Visible);
+			// default rendering?
+			this->SetShapeLayerLineColor(layerHandle, 0xFFFF00);
+			this->SetShapeLayerFillColor(layerHandle, 0xFFFF00);
+			this->SetShapeLayerFillTransparency(layerHandle, .30);
 		}
 		break;
 	default:
@@ -843,9 +844,9 @@ LONG CMapView::AddVolatileLayer(LONG GeometryType, BOOL Visible)
 }
 
 // ***************************************************************
-//		AddVolatilePoint()
+//		AddUserPoint()
 // ***************************************************************
-BSTR CMapView::AddVolatilePoint(DOUBLE Lon, DOUBLE Lat)
+BSTR CMapView::AddUserPoint(DOUBLE Lon, DOUBLE Lat)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -880,9 +881,9 @@ BSTR CMapView::AddVolatilePoint(DOUBLE Lon, DOUBLE Lat)
 }
 
 // ***************************************************************
-//		RemoveVolatileGeometry()
+//		RemoveUserGeometry()
 // ***************************************************************
-void CMapView::RemoveVolatileGeometry(LONG LayerHandle, LONG GeomHandle)
+void CMapView::RemoveUserGeometry(LONG LayerHandle, LONG GeomHandle)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -903,9 +904,9 @@ void CMapView::RemoveVolatileGeometry(LONG LayerHandle, LONG GeomHandle)
 }
 
 // ***************************************************************
-//		AddVolatilePoint()
+//		AddUserPoint()
 // ***************************************************************
-BSTR CMapView::AddVolatileCircle(DOUBLE Lon, DOUBLE Lat, DOUBLE Radius)
+BSTR CMapView::AddUserCircle(DOUBLE Lon, DOUBLE Lat, DOUBLE Radius)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -1068,3 +1069,68 @@ BSTR CMapView::GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLa
 	//return A2BSTR((LPCTSTR)strResult);
 }
 
+// ***************************************************************
+//		SetVolatileLayer()
+// ***************************************************************
+void CMapView::SetVolatileLayer(LONG GeometryType, LONG LayerHandle)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	VARIANT_BOOL vb;
+	CComPtr<IShapefile> sf = NULL;
+
+	// set up layer
+	switch ((volatileLayerType)GeometryType)
+	{
+	case vltPoint:
+		// save layer handle
+		_PointLayerHandle = LayerHandle;
+		// get layer reference
+		_PointLayer = this->GetShapefile(LayerHandle);
+		break;
+	case vltPolyline:
+		// save layer handle
+		_PolylineLayerHandle = LayerHandle;
+		// get layer reference
+		_PolylineLayer = this->GetShapefile(LayerHandle);
+		break;
+	case vltPolygon:
+		// save layer handle
+		_PolygonLayerHandle = LayerHandle;
+		// get layer reference
+		_PolygonLayer = this->GetShapefile(LayerHandle);
+		break;
+	default:
+		break;
+	}
+}
+
+// ***************************************************************
+//		PlaceGeometryByWKT()
+// ***************************************************************
+LONG CMapView::PlaceGeometryByWKT(LONG LayerHandle, LPCTSTR WKT)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	long idx = -1;
+	// get layer reference
+	CComPtr<IShapefile> sf = this->GetShapefile(LayerHandle);
+	if (sf)
+	{
+		VARIANT_BOOL vb;
+		// create a Shape
+		CComPtr<IShape> shp = NULL;
+		ComHelper::CreateShape(&shp);
+		// fill the shape based on the WKT
+		CComBSTR bstr(WKT);
+		shp->ImportFromWKT(bstr, &vb);
+		// add the shape to the layer
+		if (sf->StartEditingShapes(VARIANT_TRUE, NULL, &vb) == S_OK && vb == VARIANT_TRUE)
+		{
+			sf->EditAddShape(shp, &idx);
+			sf->StopEditingShapes((idx >= 0) ? VARIANT_TRUE : VARIANT_FALSE, (idx >= 0) ? VARIANT_TRUE : VARIANT_FALSE, NULL, &vb);
+		}
+	}
+	// return shape index
+	return idx;
+}

@@ -641,12 +641,14 @@ public:
 	afx_msg long AddLayerAndResave(LPCTSTR Filename, BOOL visible);
 	afx_msg long AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, BOOL visible);
 	afx_msg BSTR QueryLayer(LONG LayerHandle, LPCTSTR WhereClause);
-	afx_msg LONG AddVolatileLayer(LONG GeometryType, BOOL Visible);
-	afx_msg BSTR AddVolatilePoint(DOUBLE Lon, DOUBLE Lat);
-	afx_msg void RemoveVolatileGeometry(LONG LayerHandle, LONG GeomHandle);
+	afx_msg LONG AddUserLayer(LONG GeometryType, BOOL Visible);
+	afx_msg BSTR AddUserPoint(DOUBLE Lon, DOUBLE Lat);
+	afx_msg void RemoveUserGeometry(LONG LayerHandle, LONG GeomHandle);
 	afx_msg BSTR GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLayerHandle, LONG VolatileGeomHandle);
 	afx_msg void SetSearchTolerance(DOUBLE Tolerance);
-	afx_msg BSTR AddVolatileCircle(DOUBLE Lon, DOUBLE Lat, DOUBLE Radius);
+	afx_msg BSTR AddUserCircle(DOUBLE Lon, DOUBLE Lat, DOUBLE Radius);
+	afx_msg void SetVolatileLayer(LONG GeometryType, LONG LayerHandle);
+	afx_msg long PlaceGeometryByWKT(LONG LayerHandle, LPCTSTR WKT);
 
 #pragma endregion
 
