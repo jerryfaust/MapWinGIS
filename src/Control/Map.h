@@ -646,9 +646,10 @@ public:
 	afx_msg void RemoveUserGeometry(LONG LayerHandle, LONG GeomHandle);
 	afx_msg BSTR GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLayerHandle, LONG VolatileGeomHandle);
 	afx_msg void SetSearchTolerance(DOUBLE Tolerance);
-	afx_msg BSTR AddUserCircle(DOUBLE Lon, DOUBLE Lat, DOUBLE Radius);
+	afx_msg BSTR AddUserCircle(DOUBLE xCoord, DOUBLE yCoord, DOUBLE Radius);
 	afx_msg void SetVolatileLayer(LONG GeometryType, LONG LayerHandle);
-	afx_msg long PlaceGeometryByWKT(LONG LayerHandle, LPCTSTR WKT);
+	afx_msg LONG PlaceGeometryByWKT(LONG LayerHandle, LPCTSTR WKT);
+	afx_msg LONG CopyGeometryByHandle(LONG SourceLayerHandle, LONG SourceGeomHandle, LONG TargetLayerHandle);
 
 #pragma endregion
 

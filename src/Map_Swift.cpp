@@ -22,6 +22,8 @@ CComPtr<IShapefile> _PolygonLayer = NULL;
 
 // reprojector, from WGS84 to the current map projection
 CComPtr<IGeoProjection> _WGS84 = NULL;
+// reprojector, from map projection to WGS84
+CComPtr<IGeoProjection> _MapProj = NULL;
 
 double SearchTolerance = 10.0;
 
@@ -829,12 +831,18 @@ LONG CMapView::AddUserLayer(LONG GeometryType, BOOL Visible)
 	}
 	if (vb == VARIANT_TRUE)
 	{
-		// one-time set up of projection for transformations
+		// one-time set up of projections for transformations
 		if (!_WGS84)
 		{
 			ComHelper::CreateInstance(idGeoProjection, (IDispatch**)&_WGS84);
 			_WGS84->SetWgs84(&vb);
 			_WGS84->StartTransform(this->GetGeoProjection(), &vb);
+		}
+		if (!_MapProj)
+		{
+			ComHelper::CreateInstance(idGeoProjection, (IDispatch**)&_MapProj);
+			this->GetGeoProjection()->Clone(&_MapProj);
+			_MapProj->StartTransform(_WGS84, &vb);
 		}
 
 		return layerHandle;
@@ -906,7 +914,7 @@ void CMapView::RemoveUserGeometry(LONG LayerHandle, LONG GeomHandle)
 // ***************************************************************
 //		AddUserPoint()
 // ***************************************************************
-BSTR CMapView::AddUserCircle(DOUBLE Lon, DOUBLE Lat, DOUBLE Radius)
+BSTR CMapView::AddUserCircle(DOUBLE xCoord, DOUBLE yCoord, DOUBLE Radius)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -927,27 +935,27 @@ BSTR CMapView::AddUserCircle(DOUBLE Lon, DOUBLE Lat, DOUBLE Radius)
 	// circle will be a clockwise polygon of points
 	for (int i = 0; i <= 90; i++)
 	{
-		pShape->AddPoint(Lon + Radius * cos(i * radians), Lat - Radius * sin(i * radians), &idx);
+		pShape->AddPoint(xCoord + Radius * cos(i * radians), yCoord - Radius * sin(i * radians), &idx);
 	}
 	// reset the last point to the first point, since mathematically, they are not quite equal
 	double x, y;
 	pShape->get_XY(0, &x, &y, &vb);
 	pShape->put_XY(90, x, y, &vb);
 
-	CComBSTR bstrWKT;
-	//pShape->ExportToWKT(&bstrWKT);
-	//// now reproject to map projection
-	//for (int i = 0; i <= 90; i++)
-	//{
-	//	pShape->get_XY(i, &x, &y, &vb);
-	//	_WGS84->Transform(&x, &y, &vb);
-	//	pShape->put_XY(i, x, y, &vb);
-	//}
-
 	// add to Layer
 	_PolygonLayer->EditAddShape(pShape, &idx);
 	_PolygonLayer->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
 	// return string with point_handle, WKT of point
+	CComBSTR bstrWKT;
+	// now reproject to WGS84
+	for (int i = 0; i <= 90; i++)
+	{
+		pShape->get_XY(i, &x, &y, &vb);
+		_MapProj->Transform(&x, &y, &vb);
+		pShape->put_XY(i, x, y, &vb);
+	}
+	pShape->ExportToWKT(&bstrWKT);
+
 	CAtlString strResult;
 	strResult.Format("%d%s%s", idx, "\037", CAtlString(bstrWKT));
 	CComBSTR bstrResult((LPCTSTR)strResult);
@@ -1124,6 +1132,16 @@ LONG CMapView::PlaceGeometryByWKT(LONG LayerHandle, LPCTSTR WKT)
 		// fill the shape based on the WKT
 		CComBSTR bstr(WKT);
 		shp->ImportFromWKT(bstr, &vb);
+		// transform to the map projection
+		long count;
+		double x, y;
+		shp->get_NumPoints(&count);
+		for (int i = 0; i < count; i++)
+		{
+			shp->get_XY(i, &x, &y, &vb);
+			_WGS84->Transform(&x, &y, &vb);
+			shp->put_XY(i, x, y, &vb);
+		}
 		// add the shape to the layer
 		if (sf->StartEditingShapes(VARIANT_TRUE, NULL, &vb) == S_OK && vb == VARIANT_TRUE)
 		{
@@ -1134,3 +1152,39 @@ LONG CMapView::PlaceGeometryByWKT(LONG LayerHandle, LPCTSTR WKT)
 	// return shape index
 	return idx;
 }
+
+// ***************************************************************
+//		CopyGeometryByHandle()
+// ***************************************************************
+LONG CMapView::CopyGeometryByHandle(LONG SourceLayerHandle, LONG SourceGeomHandle, LONG TargetLayerHandle)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	LONG TargetGeomHandle = -1;
+	// get source layer reference
+	CComPtr<IShapefile> source = this->GetShapefile(SourceLayerHandle);
+	// get target layer reference
+	CComPtr<IShapefile> target = this->GetShapefile(TargetLayerHandle);
+	if (source && target)
+	{
+		VARIANT_BOOL vb;
+		// get geometry from source
+		CComPtr<IShape> shp = NULL;
+		source->get_Shape(SourceGeomHandle, &shp);
+		if (shp)
+		{
+			// insert into target layer
+			if (target->StartEditingShapes(VARIANT_TRUE, NULL, &vb) == S_OK && vb == VARIANT_TRUE)
+			{
+				CComPtr<IShape> newShp = NULL;
+				// set copy into target layer
+				shp->Clone(&newShp);
+				target->EditAddShape(newShp, &TargetGeomHandle);
+				target->StopEditingShapes((TargetGeomHandle < 0) ? VARIANT_FALSE : VARIANT_TRUE, (TargetGeomHandle < 0) ? VARIANT_FALSE : VARIANT_TRUE, NULL, &vb);
+			}
+		}
+	}
+	// return target index (as geom handle)
+	return TargetGeomHandle;
+}
+

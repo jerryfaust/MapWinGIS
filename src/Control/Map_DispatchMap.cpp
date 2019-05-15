@@ -314,6 +314,7 @@ BEGIN_DISPATCH_MAP(CMapView, COleControl)
 	DISP_FUNCTION_ID(CMapView, "AddUserCircle", dispidAddUserCircle, AddUserCircle, VT_BSTR, VTS_R8 VTS_R8 VTS_R8)
 	DISP_FUNCTION_ID(CMapView, "SetVolatileLayer", dispidSetVolatileLayer, SetVolatileLayer, VT_EMPTY, VTS_I4 VTS_I4)
 	DISP_FUNCTION_ID(CMapView, "PlaceGeometryByWKT", dispidPlaceGeometryByWKT, PlaceGeometryByWKT, VT_I4, VTS_I4 VTS_BSTR)
+	DISP_FUNCTION_ID(CMapView, "CopyGeometryByHandle", dispidCopyGeometryByHandle, CopyGeometryByHandle, VT_I4, VTS_I4 VTS_I4 VTS_I4)
 
 END_DISPATCH_MAP()
 //}}AFX_DISPATCH_MAP
