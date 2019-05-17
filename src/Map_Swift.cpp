@@ -12,6 +12,7 @@ enum volatileLayerType
 	vltPoint
 };
 
+
 // volatile layer references
 long _PointLayerHandle = -1;
 long _PolylineLayerHandle = -1;
@@ -300,7 +301,7 @@ void CMapView::SetLayerLabelScaling(LONG LayerHandle, LONG FontSize, DOUBLE Rela
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	// get Shapefile reference
-	IShapefile* sf = GetShapefile(LayerHandle);
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
 	if (sf)
 	{
 		// Labels reference
@@ -328,7 +329,7 @@ void CMapView::SetLayerLabelHalo(LONG LayerHandle, LONG HaloSize, LONG HaloColor
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	// get Shapefile reference
-	IShapefile* sf = GetShapefile(LayerHandle);
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
 	if (sf)
 	{
 		// Labels reference
@@ -355,7 +356,7 @@ void CMapView::SetLayerLabelShadow(LONG LayerHandle, LONG OffsetX, LONG OffsetY,
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	// get Shapefile reference
-	IShapefile* sf = GetShapefile(LayerHandle);
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
 	if (sf)
 	{
 		// Labels reference
@@ -383,7 +384,7 @@ void CMapView::SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSi
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	// get Shapefile reference
-	IShapefile* sf = GetShapefile(LayerHandle);
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
 	if (sf)
 	{
 		// Labels reference
@@ -472,7 +473,7 @@ void CMapView::GenerateLayerLabels(LONG LayerHandle)
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	// get Shapefile reference
-	IShapefile* sf = GetShapefile(LayerHandle);
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
 	if (sf)
 	{
 		// Labels reference
@@ -738,7 +739,7 @@ BSTR CMapView::QueryLayer(LONG LayerHandle, LPCTSTR WhereClause)
 	CAtlString strResult("Query Results");
 	CComBSTR result("Query Results");
 
-	IShapefile* sf = GetShapefile(LayerHandle);
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
 	if (sf)
 	{
 		ITable* tab = nullptr;
@@ -771,6 +772,23 @@ void CMapView::SetSearchTolerance(DOUBLE Tolerance)
 	SearchTolerance = Tolerance;
 }
 
+// standard work to set up visibility for Deleted shapes
+void CMapView::SetupLayerAttributes(IShapefile* sf)
+{
+	CComPtr<IShapeDrawingOptions> options;
+	long fx;
+	// projection
+	CComPtr<IGeoProjection> gp = NULL;
+	this->GetGeoProjection()->Clone(&gp);
+	sf->put_GeoProjection(gp);
+	// attributes
+	sf->put_Volatile(VARIANT_TRUE);
+	sf->put_Selectable(VARIANT_TRUE);
+	//// default visible
+	//sf->get_DefaultDrawingOptions(&options);
+	//options->put_Visible(VARIANT_TRUE);
+}
+
 // ***************************************************************
 //		AddUserLayer()
 // ***************************************************************
@@ -790,8 +808,7 @@ LONG CMapView::AddUserLayer(LONG GeometryType, BOOL Visible)
 		sf->CreateNew(CComBSTR(""), ShpfileType::SHP_POINT, &vb);
 		if (vb == VARIANT_TRUE)
 		{
-			sf->put_Volatile(VARIANT_TRUE);
-			sf->put_Selectable(VARIANT_TRUE);
+			SetupLayerAttributes(sf);
 			// add layer to map
 			layerHandle = this->AddLayer((LPDISPATCH)sf, Visible);
 			// default rendering?
@@ -805,8 +822,7 @@ LONG CMapView::AddUserLayer(LONG GeometryType, BOOL Visible)
 		sf->CreateNew(CComBSTR(""), ShpfileType::SHP_POLYLINE, &vb);
 		if (vb == VARIANT_TRUE)
 		{
-			sf->put_Volatile(VARIANT_TRUE);
-			sf->put_Selectable(VARIANT_TRUE);
+			SetupLayerAttributes(sf);
 			// add layer to map
 			layerHandle = this->AddLayer((LPDISPATCH)sf, Visible);
 		}
@@ -816,8 +832,7 @@ LONG CMapView::AddUserLayer(LONG GeometryType, BOOL Visible)
 		sf->CreateNew(CComBSTR(""), ShpfileType::SHP_POLYGON, &vb);
 		if (vb == VARIANT_TRUE)
 		{
-			sf->put_Volatile(VARIANT_TRUE);
-			sf->put_Selectable(VARIANT_TRUE);
+			SetupLayerAttributes(sf);
 			// add layer to map
 			layerHandle = this->AddLayer((LPDISPATCH)sf, Visible);
 			// default rendering?
@@ -854,7 +869,7 @@ LONG CMapView::AddUserLayer(LONG GeometryType, BOOL Visible)
 // ***************************************************************
 //		AddUserPoint()
 // ***************************************************************
-BSTR CMapView::AddUserPoint(DOUBLE Lon, DOUBLE Lat)
+BSTR CMapView::AddUserPoint(DOUBLE xCoord, DOUBLE yCoord)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -865,20 +880,22 @@ BSTR CMapView::AddUserPoint(DOUBLE Lon, DOUBLE Lat)
 	}
 
 	VARIANT_BOOL vb;
-	long idx;
+	long idx = -1;
 	// create Point Shape
 	CComPtr<IShape> pShape = NULL;
 	ComHelper::CreateShape(&pShape);
 	pShape->Create(ShpfileType::SHP_POINT, &vb);
 	// set lon, lat for creation of WKT
-	pShape->AddPoint(Lon, Lat, &idx);
+	pShape->AddPoint(xCoord, yCoord, &idx);
 	CComBSTR bstrWKT;
 	pShape->ExportToWKT(&bstrWKT);
 	// now reproject to map projection
-	_WGS84->Transform(&Lon, &Lat, &vb);
+	_WGS84->Transform(&xCoord, &yCoord, &vb);
 	// update point shape
-	pShape->put_XY(0, Lon, Lat, &vb);
+	pShape->put_XY(0, xCoord, yCoord, &vb);
 	// add to Layer
+	idx = -1;
+	_PointLayer->StartEditingShapes(VARIANT_TRUE, NULL, &vb);
 	_PointLayer->EditAddShape(pShape, &idx);
 	_PointLayer->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
 	// return string with point_handle, WKT of point
@@ -886,29 +903,6 @@ BSTR CMapView::AddUserPoint(DOUBLE Lon, DOUBLE Lat)
 	strResult.Format("%d%s%s", idx, "\037", CAtlString(bstrWKT));
 	CComBSTR bstrResult((LPCTSTR)strResult);
 	return bstrResult;
-}
-
-// ***************************************************************
-//		RemoveUserGeometry()
-// ***************************************************************
-void CMapView::RemoveUserGeometry(LONG LayerHandle, LONG GeomHandle)
-{
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	VARIANT_BOOL vb;
-	LONG count;
-
-	IShapefile* sf = GetShapefile(LayerHandle);
-	if (sf)
-	{
-		// layer must exist and point index must exist
-		if (sf && (sf->get_NumShapes(&count) == S_OK) && (count > GeomHandle))
-		{
-			sf->EditDeleteShape(GeomHandle, &vb);
-			if (vb == VARIANT_TRUE)
-				sf->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
-		}
-	}
 }
 
 // ***************************************************************
@@ -943,23 +937,53 @@ BSTR CMapView::AddUserCircle(DOUBLE xCoord, DOUBLE yCoord, DOUBLE Radius)
 	pShape->put_XY(90, x, y, &vb);
 
 	// add to Layer
+	idx = -1;
+	_PolygonLayer->StartEditingShapes(VARIANT_TRUE, NULL, &vb);
 	_PolygonLayer->EditAddShape(pShape, &idx);
 	_PolygonLayer->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
 	// return string with point_handle, WKT of point
 	CComBSTR bstrWKT;
-	// now reproject to WGS84
+	// now reproject to WGS84 (to new shape)
+	CComPtr<IShape> wgsShape = NULL;
+	ComHelper::CreateShape(&wgsShape);
+	wgsShape->Create(ShpfileType::SHP_POLYGON, &vb);
 	for (int i = 0; i <= 90; i++)
 	{
+		// take from original shape
 		pShape->get_XY(i, &x, &y, &vb);
 		_MapProj->Transform(&x, &y, &vb);
-		pShape->put_XY(i, x, y, &vb);
+		// add to new shape
+		wgsShape->AddPoint(x, y, &idx);
 	}
-	pShape->ExportToWKT(&bstrWKT);
+	wgsShape->ExportToWKT(&bstrWKT);
 
 	CAtlString strResult;
 	strResult.Format("%d%s%s", idx, "\037", CAtlString(bstrWKT));
 	CComBSTR bstrResult((LPCTSTR)strResult);
 	return bstrResult;
+}
+
+// ***************************************************************
+//		RemoveUserGeometry()
+// ***************************************************************
+void CMapView::RemoveUserGeometry(LONG LayerHandle, LONG GeomHandle)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	VARIANT_BOOL vb;
+	LONG count;
+
+	IShapefile* sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// layer must exist and point index must exist
+		if (sf && (sf->get_NumShapes(&count) == S_OK) && (count > GeomHandle))
+		{
+			sf->EditDeleteShape(GeomHandle, &vb);
+			if (vb == VARIANT_TRUE)
+				sf->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
+		}
+	}
 }
 
 // ***************************************************************

@@ -642,7 +642,7 @@ public:
 	afx_msg long AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, BOOL visible);
 	afx_msg BSTR QueryLayer(LONG LayerHandle, LPCTSTR WhereClause);
 	afx_msg LONG AddUserLayer(LONG GeometryType, BOOL Visible);
-	afx_msg BSTR AddUserPoint(DOUBLE Lon, DOUBLE Lat);
+	afx_msg BSTR AddUserPoint(DOUBLE xCoord, DOUBLE yCoord);
 	afx_msg void RemoveUserGeometry(LONG LayerHandle, LONG GeomHandle);
 	afx_msg BSTR GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLayerHandle, LONG VolatileGeomHandle);
 	afx_msg void SetSearchTolerance(DOUBLE Tolerance);
@@ -1319,6 +1319,7 @@ public:
 
 
 protected:
+	void SetupLayerAttributes(IShapefile* sf);
 
 };
 
