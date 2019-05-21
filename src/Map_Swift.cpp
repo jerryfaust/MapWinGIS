@@ -12,6 +12,11 @@ enum volatileLayerType
 	vltPoint
 };
 
+// split characters
+#define ch29 "\035"
+#define ch30 "\036"
+#define ch31 "\037"
+
 
 // volatile layer references
 long _PointLayerHandle = -1;
@@ -140,6 +145,35 @@ void CMapView::SetLayerMaxVisibleZoom(LONG LayerHandle, int newVal)
 	}
 }
 
+std::vector<CAtlString> CMapView::ParseDelimitedStrings(LPCTSTR strings)
+{
+	std::vector<CAtlString> results;
+	// get delimited string into CString
+	CAtlString strStrings(strings);
+	// we have to have something...
+	if (strStrings.GetLength() > 0)
+	{
+		// is it a single or multi-field string?
+		if (strStrings.Find(ch31) < 0)
+		{
+			results.push_back(strStrings);
+		}
+		else
+		{
+			// multi-field string
+			int tokenPos = 0;
+			CAtlString strToken = strStrings.Tokenize(ch31, tokenPos);
+			while (!strToken.IsEmpty())
+			{
+				results.push_back(strToken);
+				// next?
+				strToken = strStrings.Tokenize(ch31, tokenPos);
+			}
+		}
+	}
+	return results;
+}
+
 // ****************************************************************** 
 //		SetLayerFeatureColumn
 // ****************************************************************** 
@@ -152,30 +186,40 @@ void CMapView::SetLayerFeatureColumn(LONG LayerHandle, LPCTSTR ColumnName)
 	if (sf)
 	{
 		long fieldIndex = -1;
-		// save feature columns (unpack into field indices
-		CAtlString strColumns(ColumnName);
-		// is it a single or multi-field label?
-		if (strColumns.Find("\x1F") < 0)
+		_featureColumns[LayerHandle].clear();
+		// parse column names
+		std::vector<CAtlString> columns = ParseDelimitedStrings(ColumnName);
+		// get field indices by their names
+		for (CAtlString col : columns)
 		{
-			// single-field labeling
-			CComBSTR bstrColName(strColumns);
+			CComBSTR bstrColName(col);
 			sf->get_FieldIndexByName(bstrColName.Copy(), &fieldIndex);
 			_featureColumns[LayerHandle].push_back(fieldIndex);
 		}
-		else
-		{
-			// multi-field labeling
-			int tokenPos = 0;
-			CAtlString strToken = strColumns.Tokenize("\x1F", tokenPos);
-			while (!strToken.IsEmpty())
-			{
-				CComBSTR bstrColName(strToken);
-				sf->get_FieldIndexByName(bstrColName.Copy(), &fieldIndex);
-				_featureColumns[LayerHandle].push_back(fieldIndex);
-				// next?
-				strToken = strColumns.Tokenize("\x1F", tokenPos);
-			}
-		}
+		//// save feature columns (unpack into field indices
+		//CAtlString strColumns(ColumnName);
+		//// is it a single or multi-field label?
+		//if (strColumns.Find(ch31) < 0)
+		//{
+		//	// single-field labeling
+		//	CComBSTR bstrColName(strColumns);
+		//	sf->get_FieldIndexByName(bstrColName.Copy(), &fieldIndex);
+		//	_featureColumns[LayerHandle].push_back(fieldIndex);
+		//}
+		//else
+		//{
+		//	// multi-field labeling
+		//	int tokenPos = 0;
+		//	CAtlString strToken = strColumns.Tokenize(ch31, tokenPos);
+		//	while (!strToken.IsEmpty())
+		//	{
+		//		CComBSTR bstrColName(strToken);
+		//		sf->get_FieldIndexByName(bstrColName.Copy(), &fieldIndex);
+		//		_featureColumns[LayerHandle].push_back(fieldIndex);
+		//		// next?
+		//		strToken = strColumns.Tokenize(ch31, tokenPos);
+		//	}
+		//}
 	}
 }
 
@@ -419,7 +463,7 @@ CAtlString BuildLabelExpression(CAtlString input)
 {
 	CAtlString exp;
 	int tokenPos = 0;
-	CAtlString strToken = input.Tokenize("\037", tokenPos);
+	CAtlString strToken = input.Tokenize(ch31, tokenPos);
 	while (!strToken.IsEmpty())
 	{
 		// watch for secondary '+' separator, which indicates
@@ -459,7 +503,7 @@ CAtlString BuildLabelExpression(CAtlString input)
 				exp.Format("%s + \" \" + [%s]", exp, strToken);
 		}
 		// next?
-		strToken = input.Tokenize("\037", tokenPos);
+		strToken = input.Tokenize(ch31, tokenPos);
 	}
 	// and return
 	return exp;
@@ -509,7 +553,7 @@ void CMapView::GenerateLayerLabels(LONG LayerHandle)
 			long count = 0;
 			CAtlString strColumn = _labelColumns[LayerHandle];
 			// is it a single or multi-field label?
-			if (strColumn.Find('\037') < 0)
+			if (strColumn.Find(ch31) < 0)
 			{
 				// single-field labeling
 				CComBSTR bstrColName(strColumn);
@@ -528,6 +572,20 @@ void CMapView::GenerateLayerLabels(LONG LayerHandle)
 			labels->Release();
 		}
 	}
+}
+
+void DeleteShapefile(LPCTSTR ShapefileName)
+{
+	CAtlString sfName(ShapefileName);
+	sfName.MakeLower();
+	remove((LPCTSTR)sfName);
+	sfName.Replace(".shp", ".shx");
+	remove((LPCTSTR)sfName);
+	sfName.Replace(".shx", ".dbf");
+	remove((LPCTSTR)sfName);
+	sfName.Replace(".dbf", ".prj");
+	remove((LPCTSTR)sfName);
+	Sleep(100);
 }
 
 // ***************************************************************
@@ -602,16 +660,7 @@ long CMapView::AddLayerAndResave(LPCTSTR Filename, BOOL visible)
 					VARIANT_BOOL vb;
 					sf->Close(&vb);
 					layer->Release();
-					sfName = Filename;
-					sfName.MakeLower();
-					remove((LPCTSTR)sfName);
-					sfName.Replace(".shp", ".shx");
-					remove((LPCTSTR)sfName);
-					sfName.Replace(".shx", ".dbf");
-					remove((LPCTSTR)sfName);
-					sfName.Replace(".dbf", ".prj");
-					remove((LPCTSTR)sfName);
-					Sleep(100);
+					DeleteShapefile(Filename);
 
 					// now resave, to the original name, in the new projection
 					VARIANT_BOOL success;
@@ -641,7 +690,7 @@ long CMapView::AddLayerAndResave(LPCTSTR Filename, BOOL visible)
 // ***************************************************************
 //		AddDatasourceAndResave()
 // ***************************************************************
-long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, BOOL visible)
+long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, LPCTSTR Columns, BOOL visible)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -650,6 +699,8 @@ long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableNam
 	IOgrLayer* layer = NULL;
 	CComBSTR bstrConnection(ConnectionString);
 	CComBSTR bstrTable(TableName);
+	CComBSTR bstrColumns(Columns);
+
 	// build Shapefile path
 
 	// if placing in parent directory
@@ -665,16 +716,21 @@ long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableNam
 	bstrShapefile.Append(bstrTable);
 	bstrShapefile.Append(".shp");
 
-	// does the Shapefile already exist?
-	handle = AddLayerFromFilename(CAtlString(bstrShapefile), tkFileOpenStrategy::fosAutoDetect, visible);
-	if (handle >= 0) return handle;
+	// if no columns are specified, and a Shapefile already exists, just load it and exit
+	if (bstrColumns.Length() == 0)
+	{
+		// does the Shapefile already exist?
+		handle = AddLayerFromFilename(CAtlString(bstrShapefile), tkFileOpenStrategy::fosAutoDetect, visible);
+		if (handle >= 0) return handle;
+	}
 
 	// else continue on loading from database
-	_fileManager->OpenFromDatabase(bstrConnection, bstrTable, &layer);
+	layer = OpenLayerWithColumns(bstrConnection, bstrTable, bstrColumns);
+	//_fileManager->OpenFromDatabase(bstrConnection, bstrTable, &layer);
 	if (layer)
 	{
-		VARIANT_BOOL vbResult;
-		layer->get_SupportsEditing(tkOgrSaveType::ostSaveAll, &vbResult);
+		//VARIANT_BOOL vbResult;
+		//layer->get_SupportsEditing(tkOgrSaveType::ostSaveAll, &vbResult);
 		// for now, only if a GDB datasource
 		CAtlString strConnStr(ConnectionString);
 		if (strConnStr.MakeLower().Find(".gdb") > 0)
@@ -710,6 +766,8 @@ long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableNam
 					VARIANT_BOOL vb;
 					sf->Close(&vb);
 					layer->Release();
+					// pre-delete any previously saved files
+					DeleteShapefile((LPCTSTR)CString(bstrShapefile));
 					// now save, to Shapefile of original name, in the new projection
 					VARIANT_BOOL success;
 					sfNew->SaveAs(bstrShapefile, _globalCallback, &success);
@@ -727,6 +785,46 @@ long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableNam
 	{
 		return -1;
 	}
+}
+
+// Add layer with only those columns specified, or entire layer if no columns specified
+IOgrLayer* CMapView::OpenLayerWithColumns(BSTR strConnection, BSTR strTable, BSTR strColumns)
+{
+	long handle = -1;
+	IOgrLayer* layer = NULL;
+	CComBSTR bstrTable(strTable);
+	CAtlString cstrColumns(strColumns);
+	CAtlString sqlQuery;
+
+	// do we have columns specified ?
+	if (cstrColumns.GetLength() > 0)
+	{
+		// build SQL query
+		sqlQuery = "SELECT ";
+		bool firstCol = true;
+		vector<CAtlString> columns = ParseDelimitedStrings((LPCTSTR)cstrColumns);
+		for (CAtlString col : columns)
+		{
+			if (firstCol)
+			{
+				sqlQuery.Append(col);
+				firstCol = false;
+			}
+			else
+			{
+				sqlQuery.AppendFormat(", %s", col);
+			}
+		}
+		// FROM
+		sqlQuery.AppendFormat(" FROM %s", (LPCTSTR)CString(strTable));
+		// override table with query
+		bstrTable = (LPCTSTR)sqlQuery;
+	}
+
+	// open the table/query
+	_fileManager->OpenFromDatabase(strConnection, bstrTable, &layer);
+	// return layer reference
+	return layer;
 }
 
 // ***************************************************************
@@ -900,7 +998,7 @@ BSTR CMapView::AddUserPoint(DOUBLE xCoord, DOUBLE yCoord)
 	_PointLayer->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
 	// return string with point_handle, WKT of point
 	CAtlString strResult;
-	strResult.Format("%d%s%s", idx, "\037", CAtlString(bstrWKT));
+	strResult.Format("%d%s%s", idx, ch31, CAtlString(bstrWKT));
 	CComBSTR bstrResult((LPCTSTR)strResult);
 	return bstrResult;
 }
@@ -947,18 +1045,19 @@ BSTR CMapView::AddUserCircle(DOUBLE xCoord, DOUBLE yCoord, DOUBLE Radius)
 	CComPtr<IShape> wgsShape = NULL;
 	ComHelper::CreateShape(&wgsShape);
 	wgsShape->Create(ShpfileType::SHP_POLYGON, &vb);
+	long newIdx = -1;
 	for (int i = 0; i <= 90; i++)
 	{
 		// take from original shape
 		pShape->get_XY(i, &x, &y, &vb);
 		_MapProj->Transform(&x, &y, &vb);
-		// add to new shape
-		wgsShape->AddPoint(x, y, &idx);
+		// add to new shape (throw-away index)
+		wgsShape->AddPoint(x, y, &newIdx);
 	}
 	wgsShape->ExportToWKT(&bstrWKT);
 
 	CAtlString strResult;
-	strResult.Format("%d%s%s", idx, "\037", CAtlString(bstrWKT));
+	strResult.Format("%d%s%s", idx, ch31, CAtlString(bstrWKT));
 	CComBSTR bstrResult((LPCTSTR)strResult);
 	return bstrResult;
 }
@@ -1072,23 +1171,64 @@ BSTR CMapView::GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLa
 					SafeArrayGetUBound(sResults.parray, 1, &uBound);
 					for (int i = lBound; i <= uBound; i++)
 					{
+						// current shape index (GeomHandle)
+						long shapeIdx = (long)(pData[i]);
 						// iterate list of field indexes
 						CComVariant sValue;
-						for (long idx = 0; idx < (_featureColumns[SearchLayerHandle]).size(); idx++)
+						long numFields = (_featureColumns[SearchLayerHandle]).size();
+						if (numFields == 0)
 						{
-							sLayer->get_CellValue((_featureColumns[SearchLayerHandle]).at(idx), (long)(pData[i]), &sValue);
-							CAtlString val(sValue);
+							CAtlString gh;
+							gh.Format("%d", shapeIdx);
+							// no fields, just set GeomHandle
 							if (strResult.GetLength() == 0)
 							{
-								strResult = val;
+								// first entry
+								strResult = gh;
 							}
 							else
 							{
-								strResult.Format("%s%s%s", strResult, "\037", val);
+								// append start of feature
+								strResult.Append(gh);
+							}
+						}
+						else
+						{
+							for (long idx = 0; idx < numFields; idx++)
+							{
+								long fieldIdx = (_featureColumns[SearchLayerHandle]).at(idx);
+								// get next value, convert to string
+								sLayer->get_CellValue(fieldIdx, shapeIdx, &sValue);
+								CAtlString val(sValue);
+								// on first row entry of feature, prepend GeomHandle
+								if (idx == 0)
+								{
+									// prepend GeomHandle to first field value
+									if (strResult.GetLength() == 0)
+									{
+										// very first entry
+										strResult.Format("%d%s%s", shapeIdx, ch31, val);
+									}
+									else
+									{
+										// append start of feature
+										strResult.Format("%s%d%s%s", strResult, shapeIdx, ch31, val);
+									}
+								}
+								else if (idx < numFields)
+								{
+									// intermediate field value
+									strResult.Format("%s%s%s", strResult, ch31, val);
+								}
+								else
+								{
+									// last field value
+									strResult.Append(val);
+								}
 							}
 						}
 						// if not on last entry, add ch30 separator
-						if (i < uBound) strResult.Append("\036");
+						if (i < uBound) strResult.Append(ch30);
 					}
 				}
 			}

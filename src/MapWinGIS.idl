@@ -7109,7 +7109,7 @@ library MapWinGIS
 			[id(280)] void SetLayerLabelFont(LONG LayerHandle, BSTR FontName, LONG FontSize, LONG FontColor, VARIANT_BOOL FontBold, VARIANT_BOOL FontItalic, DOUBLE RelativeScale);
 			[id(281)] void GenerateLayerLabels(LONG LayerHandle);
 			[id(282)] LONG AddLayerAndResave(BSTR Filename, VARIANT_BOOL Visible);
-			[id(283)] LONG AddDatasourceAndResave(BSTR ConnectionString, BSTR TableName, VARIANT_BOOL Visible);
+			[id(283)] LONG AddDatasourceAndResave(BSTR ConnectionString, BSTR TableName, BSTR Columns, VARIANT_BOOL Visible);
 
 #endif			
 

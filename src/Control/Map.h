@@ -639,7 +639,7 @@ public:
 	afx_msg void SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, LONG FontColor, BOOL FontBold, BOOL FontItalic, DOUBLE RelativeScale);
 	afx_msg void GenerateLayerLabels(LONG LayerHandle);
 	afx_msg long AddLayerAndResave(LPCTSTR Filename, BOOL visible);
-	afx_msg long AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, BOOL visible);
+	afx_msg long AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, LPCTSTR Columns, BOOL visible);
 	afx_msg BSTR QueryLayer(LONG LayerHandle, LPCTSTR WhereClause);
 	afx_msg LONG AddUserLayer(LONG GeometryType, BOOL Visible);
 	afx_msg BSTR AddUserPoint(DOUBLE xCoord, DOUBLE yCoord);
@@ -1319,7 +1319,9 @@ public:
 
 
 protected:
+	std::vector<CAtlString> ParseDelimitedStrings(LPCTSTR strings);
 	void SetupLayerAttributes(IShapefile* sf);
+	IOgrLayer* OpenLayerWithColumns(BSTR strConnection, BSTR strTable, BSTR strColumns);
 
 };
 
