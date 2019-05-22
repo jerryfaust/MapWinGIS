@@ -641,7 +641,7 @@ public:
 	afx_msg long AddLayerAndResave(LPCTSTR Filename, BOOL visible);
 	afx_msg long AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, LPCTSTR Columns, BOOL visible);
 	afx_msg BSTR QueryLayer(LONG LayerHandle, LPCTSTR WhereClause);
-	afx_msg LONG AddUserLayer(LONG GeometryType, BOOL Visible);
+	afx_msg LONG AddUserLayer(LONG GeometryType, LPCTSTR Columns, BOOL Visible);
 	afx_msg BSTR AddUserPoint(DOUBLE xCoord, DOUBLE yCoord);
 	afx_msg void RemoveUserGeometry(LONG LayerHandle, LONG GeomHandle);
 	afx_msg BSTR GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLayerHandle, LONG VolatileGeomHandle);
@@ -650,6 +650,7 @@ public:
 	afx_msg void SetVolatileLayer(LONG GeometryType, LONG LayerHandle);
 	afx_msg LONG PlaceGeometryByWKT(LONG LayerHandle, LPCTSTR WKT);
 	afx_msg LONG CopyGeometryByHandle(LONG SourceLayerHandle, LONG SourceGeomHandle, LONG TargetLayerHandle);
+	afx_msg void SetGeometryLabels(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValuePairs);
 
 #pragma endregion
 
@@ -1319,8 +1320,8 @@ public:
 
 
 protected:
-	std::vector<CAtlString> ParseDelimitedStrings(LPCTSTR strings);
-	void SetupLayerAttributes(IShapefile* sf);
+	std::vector<CAtlString> ParseDelimitedStrings(LPCTSTR strings, LPCTSTR delimiter);
+	void SetupLayerAttributes(IShapefile* sf, LPCTSTR Columns);
 	IOgrLayer* OpenLayerWithColumns(BSTR strConnection, BSTR strTable, BSTR strColumns);
 
 };

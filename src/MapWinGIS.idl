@@ -7110,6 +7110,17 @@ library MapWinGIS
 			[id(281)] void GenerateLayerLabels(LONG LayerHandle);
 			[id(282)] LONG AddLayerAndResave(BSTR Filename, VARIANT_BOOL Visible);
 			[id(283)] LONG AddDatasourceAndResave(BSTR ConnectionString, BSTR TableName, BSTR Columns, VARIANT_BOOL Visible);
+			[id(284)] BSTR QueryLayer(LONG LayerHandle, LPCTSTR WhereClause);
+			[id(285)] LONG AddUserLayer(LONG GeometryType, LPCTSTR Columns, BOOL Visible);
+			[id(286)] BSTR AddUserPoint(DOUBLE xCoord, DOUBLE yCoord);
+			[id(287)] void RemoveUserGeometry(LONG LayerHandle, LONG GeomHandle);
+			[id(288)] BSTR GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLayerHandle, LONG VolatileGeomHandle);
+			[id(289)] void SetSearchTolerance(DOUBLE Tolerance);
+			[id(290)] BSTR AddUserCircle(DOUBLE xCoord, DOUBLE yCoord, DOUBLE Radius);
+			[id(291)] void SetVolatileLayer(LONG GeometryType, LONG LayerHandle);
+			[id(292)] LONG PlaceGeometryByWKT(LONG LayerHandle, LPCTSTR WKT);
+			[id(293)] LONG CopyGeometryByHandle(LONG SourceLayerHandle, LONG SourceGeomHandle, LONG TargetLayerHandle);
+			[id(294)] void SetGeometryLabels(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValuePairs);
 
 #endif			
 

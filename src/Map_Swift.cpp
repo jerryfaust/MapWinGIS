@@ -145,7 +145,7 @@ void CMapView::SetLayerMaxVisibleZoom(LONG LayerHandle, int newVal)
 	}
 }
 
-std::vector<CAtlString> CMapView::ParseDelimitedStrings(LPCTSTR strings)
+std::vector<CAtlString> CMapView::ParseDelimitedStrings(LPCTSTR strings, LPCTSTR delimiter)
 {
 	std::vector<CAtlString> results;
 	// get delimited string into CString
@@ -154,7 +154,7 @@ std::vector<CAtlString> CMapView::ParseDelimitedStrings(LPCTSTR strings)
 	if (strStrings.GetLength() > 0)
 	{
 		// is it a single or multi-field string?
-		if (strStrings.Find(ch31) < 0)
+		if (strStrings.Find(delimiter) < 0)
 		{
 			results.push_back(strStrings);
 		}
@@ -162,12 +162,12 @@ std::vector<CAtlString> CMapView::ParseDelimitedStrings(LPCTSTR strings)
 		{
 			// multi-field string
 			int tokenPos = 0;
-			CAtlString strToken = strStrings.Tokenize(ch31, tokenPos);
+			CAtlString strToken = strStrings.Tokenize(delimiter, tokenPos);
 			while (!strToken.IsEmpty())
 			{
 				results.push_back(strToken);
 				// next?
-				strToken = strStrings.Tokenize(ch31, tokenPos);
+				strToken = strStrings.Tokenize(delimiter, tokenPos);
 			}
 		}
 	}
@@ -188,7 +188,7 @@ void CMapView::SetLayerFeatureColumn(LONG LayerHandle, LPCTSTR ColumnName)
 		long fieldIndex = -1;
 		_featureColumns[LayerHandle].clear();
 		// parse column names
-		std::vector<CAtlString> columns = ParseDelimitedStrings(ColumnName);
+		std::vector<CAtlString> columns = ParseDelimitedStrings(ColumnName, ch31);
 		// get field indices by their names
 		for (CAtlString col : columns)
 		{
@@ -802,7 +802,7 @@ IOgrLayer* CMapView::OpenLayerWithColumns(BSTR strConnection, BSTR strTable, BST
 		// build SQL query
 		sqlQuery = "SELECT ";
 		bool firstCol = true;
-		vector<CAtlString> columns = ParseDelimitedStrings((LPCTSTR)cstrColumns);
+		vector<CAtlString> columns = ParseDelimitedStrings((LPCTSTR)cstrColumns, ch31);
 		for (CAtlString col : columns)
 		{
 			if (firstCol)
@@ -871,7 +871,7 @@ void CMapView::SetSearchTolerance(DOUBLE Tolerance)
 }
 
 // standard work to set up visibility for Deleted shapes
-void CMapView::SetupLayerAttributes(IShapefile* sf)
+void CMapView::SetupLayerAttributes(IShapefile* sf, LPCTSTR Columns)
 {
 	CComPtr<IShapeDrawingOptions> options;
 	long fx;
@@ -879,6 +879,15 @@ void CMapView::SetupLayerAttributes(IShapefile* sf)
 	CComPtr<IGeoProjection> gp = NULL;
 	this->GetGeoProjection()->Clone(&gp);
 	sf->put_GeoProjection(gp);
+	// columns ?
+	std::vector<CAtlString> cols = ParseDelimitedStrings(Columns, ch31);
+	for (CAtlString col : cols)
+	{
+		// all will be String columns of 128 characters
+		long idx;
+		CComBSTR bCol(col);
+		sf->EditAddField(bCol, FieldType::STRING_FIELD, 0, 128, &idx);
+	}
 	// attributes
 	sf->put_Volatile(VARIANT_TRUE);
 	sf->put_Selectable(VARIANT_TRUE);
@@ -890,7 +899,7 @@ void CMapView::SetupLayerAttributes(IShapefile* sf)
 // ***************************************************************
 //		AddUserLayer()
 // ***************************************************************
-LONG CMapView::AddUserLayer(LONG GeometryType, BOOL Visible)
+LONG CMapView::AddUserLayer(LONG GeometryType, LPCTSTR Columns, BOOL Visible)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -906,7 +915,7 @@ LONG CMapView::AddUserLayer(LONG GeometryType, BOOL Visible)
 		sf->CreateNew(CComBSTR(""), ShpfileType::SHP_POINT, &vb);
 		if (vb == VARIANT_TRUE)
 		{
-			SetupLayerAttributes(sf);
+			SetupLayerAttributes(sf, Columns);
 			// add layer to map
 			layerHandle = this->AddLayer((LPDISPATCH)sf, Visible);
 			// default rendering?
@@ -920,7 +929,7 @@ LONG CMapView::AddUserLayer(LONG GeometryType, BOOL Visible)
 		sf->CreateNew(CComBSTR(""), ShpfileType::SHP_POLYLINE, &vb);
 		if (vb == VARIANT_TRUE)
 		{
-			SetupLayerAttributes(sf);
+			SetupLayerAttributes(sf, Columns);
 			// add layer to map
 			layerHandle = this->AddLayer((LPDISPATCH)sf, Visible);
 		}
@@ -930,7 +939,7 @@ LONG CMapView::AddUserLayer(LONG GeometryType, BOOL Visible)
 		sf->CreateNew(CComBSTR(""), ShpfileType::SHP_POLYGON, &vb);
 		if (vb == VARIANT_TRUE)
 		{
-			SetupLayerAttributes(sf);
+			SetupLayerAttributes(sf, Columns);
 			// add layer to map
 			layerHandle = this->AddLayer((LPDISPATCH)sf, Visible);
 			// default rendering?
@@ -1350,5 +1359,43 @@ LONG CMapView::CopyGeometryByHandle(LONG SourceLayerHandle, LONG SourceGeomHandl
 	}
 	// return target index (as geom handle)
 	return TargetGeomHandle;
+}
+
+
+// ****************************************************************** 
+//		SetGeometryLabels
+// ****************************************************************** 
+void CMapView::SetGeometryLabels(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValuePairs)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// set label values based on the specified name/value pairs
+	VARIANT_BOOL vb;
+	// get layer reference
+	CComPtr<IShapefile> sf = this->GetShapefile(LayerHandle);
+	if (sf && sf->StartEditingShapes(VARIANT_TRUE, NULL, &vb) == S_OK && vb == VARIANT_TRUE)
+	{
+		VARIANT_BOOL vb;
+		// first split apart name/value pairs (character 30)
+		std::vector<CAtlString> pairs = ParseDelimitedStrings(NameValuePairs, ch30);
+		for (CAtlString pair : pairs)
+		{
+			long idx = -1;
+			// now split each pair into name/value (character 31)
+			std::vector<CAtlString> nameValue = ParseDelimitedStrings(pair, ch31);
+			// name is nameValue[0], value is nameValue[1]
+			CComBSTR name(nameValue[0]);
+			CComVariant value((LPCTSTR)nameValue[1]);
+			sf->get_FieldIndexByName(name, &idx);
+			if (idx >= 0)
+			{
+				sf->EditCellValue(idx, GeomHandle, value, &vb);
+				if (vb == VARIANT_FALSE) break;
+			}
+		}
+		// save
+		VARIANT_BOOL vbResult;
+		sf->StopEditingShapes(vb, vb, NULL, &vbResult);
+	}
 }
 
