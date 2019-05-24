@@ -650,7 +650,9 @@ public:
 	afx_msg void SetVolatileLayer(LONG GeometryType, LONG LayerHandle);
 	afx_msg LONG PlaceGeometryByWKT(LONG LayerHandle, LPCTSTR WKT);
 	afx_msg LONG CopyGeometryByHandle(LONG SourceLayerHandle, LONG SourceGeomHandle, LONG TargetLayerHandle);
-	afx_msg void SetGeometryLabels(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValuePairs);
+	afx_msg void SetCellValues(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValuePairs);
+	afx_msg void SetPointDiameter(LONG Meters);
+	afx_msg void ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor);
 
 #pragma endregion
 
@@ -743,6 +745,8 @@ public:
 		{ FireEvent(eventidBeforeLayers, EVENT_PARAM(VTS_I4 VTS_I4 VTS_I4 VTS_I4 VTS_I4 VTS_I4), hdc, xMin, xMax, yMin, yMax, Handled); }
 	void FireAfterLayers(long hdc, long xMin, long xMax, long yMin, long yMax, tkMwBoolean* Handled)
 		{ FireEvent(eventidAfterLayers, EVENT_PARAM(VTS_I4 VTS_I4 VTS_I4 VTS_I4 VTS_I4 VTS_I4), hdc, xMin, xMax, yMin, yMax, Handled); }
+    void FireLayerReprojectedIncomplete(LONG LayerHandle, LONG NumReprojected, LONG NumShapes)
+        { FireEvent(eventidLayerReprojectedIncomplete, EVENT_PARAM(VTS_I4 VTS_I4 VTS_I4), LayerHandle, NumReprojected, NumShapes); }
 
 	//}}AFX_EVENT
 	DECLARE_EVENT_MAP()

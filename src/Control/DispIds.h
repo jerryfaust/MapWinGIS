@@ -3,7 +3,9 @@ enum {		//{{AFX_DISP_ID(CMapView)
 	// NOTE: ClassWizard will add and remove enumeration elements here
 	//    DO NOT EDIT what you see in these blocks of generated code !
 	// **ClassWizard is a thing of the past... feel free to edit this code.
-	dispidSetGeometryLabels = 294L,
+	dispidZoomToGeometry = 296L,
+	dispidSetPointDiameter = 295L,
+	dispidSetCellValues = 294L,
 	dispidCopyGeometryByHandle = 293L,
 	dispidPlaceGeometryByWKT = 292L,
 	dispidSetVolatileLayer = 291L,
@@ -320,5 +322,6 @@ enum {		//{{AFX_DISP_ID(CMapView)
 	eventidOnDrawBackBuffer2 = 36L,
 	eventidBeforeLayers = 37L,
 	eventidAfterLayers = 38L,
+	eventidLayerReprojectedIncomplete = 39L,
 	//}}AFX_DISP_ID
 };

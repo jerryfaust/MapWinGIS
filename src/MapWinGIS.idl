@@ -5919,6 +5919,8 @@ interface IGlobalSettings : IDispatch{
 	[propput, id(69)] HRESULT OgrShareConnection([in] VARIANT_BOOL newVal);
 	[propget, id(70)] HRESULT OgrInterpretYNStringAsBoolean([out, retval] VARIANT_BOOL* pVal);
 	[propput, id(70)] HRESULT OgrInterpretYNStringAsBoolean([in] VARIANT_BOOL newVal);
+    [propget, id(71)] HRESULT AllowLayersWithIncompleteReprojection([out, retval] VARIANT_BOOL* pVal);
+    [propput, id(71)] HRESULT AllowLayersWithIncompleteReprojection([in] VARIANT_BOOL newVal);
 };
 
 [
@@ -7120,7 +7122,9 @@ library MapWinGIS
 			[id(291)] void SetVolatileLayer(LONG GeometryType, LONG LayerHandle);
 			[id(292)] LONG PlaceGeometryByWKT(LONG LayerHandle, LPCTSTR WKT);
 			[id(293)] LONG CopyGeometryByHandle(LONG SourceLayerHandle, LONG SourceGeomHandle, LONG TargetLayerHandle);
-			[id(294)] void SetGeometryLabels(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValuePairs);
+			[id(294)] void SetCellValues(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValuePairs);
+			[id(295)] void SetPointDiameter(LONG Meters);
+			[id(296)] void ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor);
 
 #endif			
 
@@ -7203,6 +7207,7 @@ library MapWinGIS
 			[id(36)] void OnDrawBackBuffer2(LONG height, LONG Width, LONG Stride, LONG pixelFormat, LONG scan0);
 			[id(37)] void BeforeLayers(long hdc, long xMin, long xMax, long yMin, long yMax, tkMwBoolean* Handled);
 			[id(38)] void AfterLayers(long hdc, long xMin, long xMax, long yMin, long yMax, tkMwBoolean* Handled);
+            [id(39)] void LayerReprojectedIncomplete(LONG LayerHandle, Long NumReprojected, Long NumShapes);
 			//}}AFX_ODL_EVENT
 			
 	};

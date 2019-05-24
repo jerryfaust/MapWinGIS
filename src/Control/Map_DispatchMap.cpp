@@ -315,7 +315,9 @@ BEGIN_DISPATCH_MAP(CMapView, COleControl)
 	DISP_FUNCTION_ID(CMapView, "SetVolatileLayer", dispidSetVolatileLayer, SetVolatileLayer, VT_EMPTY, VTS_I4 VTS_I4)
 	DISP_FUNCTION_ID(CMapView, "PlaceGeometryByWKT", dispidPlaceGeometryByWKT, PlaceGeometryByWKT, VT_I4, VTS_I4 VTS_BSTR)
 	DISP_FUNCTION_ID(CMapView, "CopyGeometryByHandle", dispidCopyGeometryByHandle, CopyGeometryByHandle, VT_I4, VTS_I4 VTS_I4 VTS_I4)
-	DISP_FUNCTION_ID(CMapView, "SetGeometryLabels", dispidSetGeometryLabels, SetGeometryLabels, VT_EMPTY, VTS_I4 VTS_I4 VTS_BSTR)
+	DISP_FUNCTION_ID(CMapView, "SetCellValues", dispidSetCellValues, SetCellValues, VT_EMPTY, VTS_I4 VTS_I4 VTS_BSTR)
+	DISP_FUNCTION_ID(CMapView, "SetPointDiameter", dispidSetPointDiameter, SetPointDiameter, VT_EMPTY, VTS_I4)
+	DISP_FUNCTION_ID(CMapView, "ZoomToGeometry", dispidZoomToGeometry, ZoomToGeometry, VT_EMPTY, VTS_I4 VTS_I4 VTS_R4)
 
 END_DISPATCH_MAP()
 //}}AFX_DISPATCH_MAP

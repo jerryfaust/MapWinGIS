@@ -32,6 +32,8 @@ CComPtr<IGeoProjection> _WGS84 = NULL;
 CComPtr<IGeoProjection> _MapProj = NULL;
 
 double SearchTolerance = 10.0;
+// minimum point diamter for zoom
+long PointDiameter = 100;
 
 VARIANT_BOOL CMapView::SetConstrainingExtents(DOUBLE xMin, DOUBLE yMin, DOUBLE xMax, DOUBLE yMax)
 {
@@ -98,52 +100,6 @@ void CMapView::SetLayerLabelMinScale(LONG LayerHandle, DOUBLE MinScale)
 	}
 }
 
-
-// ****************************************************************** 
-//		LayerMinVisibleZoom
-// ****************************************************************** 
-int CMapView::GetLayerMinVisibleZoom(LONG LayerHandle)
-{
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	Layer* layer = GetLayer(LayerHandle);
-	return layer ? layer->minVisibleZoom : -1;
-}
-
-void CMapView::SetLayerMinVisibleZoom(LONG LayerHandle, int newVal)
-{
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	Layer* layer = GetLayer(LayerHandle);
-	if (layer) {
-		if (newVal < 0) newVal = 0;
-		if (newVal > 18) newVal = 18;
-		layer->minVisibleZoom = newVal;
-	}
-}
-
-// ****************************************************************** 
-//		LayerMaxVisibleZoom
-// ****************************************************************** 
-int CMapView::GetLayerMaxVisibleZoom(LONG LayerHandle)
-{
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-	Layer* layer = GetLayer(LayerHandle);
-	return layer ? layer->maxVisibleZoom : -1;
-}
-
-void CMapView::SetLayerMaxVisibleZoom(LONG LayerHandle, int newVal)
-{
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	Layer* layer = GetLayer(LayerHandle);
-	if (layer)
-	{
-		if (newVal < 0) newVal = 0;
-		if (newVal > 100) newVal = 100;
-		layer->maxVisibleZoom = newVal;
-	}
-}
 
 std::vector<CAtlString> CMapView::ParseDelimitedStrings(LPCTSTR strings, LPCTSTR delimiter)
 {
@@ -1363,9 +1319,9 @@ LONG CMapView::CopyGeometryByHandle(LONG SourceLayerHandle, LONG SourceGeomHandl
 
 
 // ****************************************************************** 
-//		SetGeometryLabels
+//		SetCellValues
 // ****************************************************************** 
-void CMapView::SetGeometryLabels(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValuePairs)
+void CMapView::SetCellValues(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValuePairs)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -1398,4 +1354,61 @@ void CMapView::SetGeometryLabels(LONG LayerHandle, LONG GeomHandle, LPCTSTR Name
 		sf->StopEditingShapes(vb, vb, NULL, &vbResult);
 	}
 }
+
+
+// ***************************************************************
+//		SetPointDiameter()
+// ***************************************************************
+void CMapView::SetPointDiameter(LONG Meters)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// save value
+	PointDiameter = Meters;
+}
+
+
+// ****************************************************************** 
+//		ZoomToGeometry
+// ****************************************************************** 
+void CMapView::ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// get Shapefile reference
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// get Shape
+		CComPtr<IShape> shp = NULL;
+		sf->get_Shape(GeomHandle, &shp);
+		if (shp)
+		{
+			// get Shape extents (special consideration for Points)
+			CComPtr<IExtents> ext = NULL;
+			ShpfileType shapeType;
+			shp->get_ShapeType2D(&shapeType);
+			if (shapeType == ShpfileType::SHP_POINT)
+			{
+				// create extents from point
+				double x, y;
+				VARIANT_BOOL vb;
+				shp->get_XY(0, &x, &y, &vb);
+				ComHelper::CreateExtents(&ext);
+				ext->SetBounds(x - (PointDiameter / 2.0), y - (PointDiameter / 2.0), 0.0, x + (PointDiameter / 2.0), y + (PointDiameter / 2.0), 0.0);
+			}
+			else
+			{
+				// get extents
+				shp->get_Extents(&ext);
+			}
+			// now zoom to extents
+			this->LockWindow(tkLockMode::lmLock);
+			this->SetExtents(ext);
+			this->ZoomOut(max(0.0, ZoomFactor - 1.0));
+			this->LockWindow(tkLockMode::lmUnlock);
+		}
+	}
+}
+
 
