@@ -275,6 +275,8 @@ void CMapView::SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG 
 					//labelPos = tkLabelPositioning::lpCentroid;
 					// no frame ?
 					labels->put_FrameVisible(VARIANT_FALSE);
+					labels->put_Alignment(tkLabelAlignment::laCenter);
+					labels->put_AutoOffset(VARIANT_FALSE);
 				}
 				//long fieldIndex = -1;
 				//long count = 0;
@@ -948,10 +950,10 @@ BSTR CMapView::AddUserPoint(DOUBLE xCoord, DOUBLE yCoord)
 	CComPtr<IShape> pShape = NULL;
 	ComHelper::CreateShape(&pShape);
 	pShape->Create(ShpfileType::SHP_POINT, &vb);
-	// set lon, lat for creation of WKT
+	// set specified lon, lat 
 	pShape->AddPoint(xCoord, yCoord, &idx);
-	CComBSTR bstrWKT;
-	pShape->ExportToWKT(&bstrWKT);
+	//CComBSTR bstrWKT;
+	//pShape->ExportToWKT(&bstrWKT);
 	// now reproject to map projection
 	_WGS84->Transform(&xCoord, &yCoord, &vb);
 	// update point shape
@@ -963,13 +965,14 @@ BSTR CMapView::AddUserPoint(DOUBLE xCoord, DOUBLE yCoord)
 	_PointLayer->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
 	// return string with point_handle, WKT of point
 	CAtlString strResult;
-	strResult.Format("%d%s%s", idx, ch31, CAtlString(bstrWKT));
+	//strResult.Format("%d%s%s", idx, ch31, CAtlString(bstrWKT));
+	strResult.Format("%d", idx);
 	CComBSTR bstrResult((LPCTSTR)strResult);
 	return bstrResult;
 }
 
 // ***************************************************************
-//		AddUserPoint()
+//		AddUserCircle()
 // ***************************************************************
 BSTR CMapView::AddUserCircle(DOUBLE xCoord, DOUBLE yCoord, DOUBLE Radius)
 {
@@ -1004,25 +1007,26 @@ BSTR CMapView::AddUserCircle(DOUBLE xCoord, DOUBLE yCoord, DOUBLE Radius)
 	_PolygonLayer->StartEditingShapes(VARIANT_TRUE, NULL, &vb);
 	_PolygonLayer->EditAddShape(pShape, &idx);
 	_PolygonLayer->StopEditingShapes(VARIANT_TRUE, VARIANT_TRUE, NULL, &vb);
-	// return string with point_handle, WKT of point
-	CComBSTR bstrWKT;
-	// now reproject to WGS84 (to new shape)
-	CComPtr<IShape> wgsShape = NULL;
-	ComHelper::CreateShape(&wgsShape);
-	wgsShape->Create(ShpfileType::SHP_POLYGON, &vb);
-	long newIdx = -1;
-	for (int i = 0; i <= 90; i++)
-	{
-		// take from original shape
-		pShape->get_XY(i, &x, &y, &vb);
-		_MapProj->Transform(&x, &y, &vb);
-		// add to new shape (throw-away index)
-		wgsShape->AddPoint(x, y, &newIdx);
-	}
-	wgsShape->ExportToWKT(&bstrWKT);
+	//// return string with point_handle, WKT of point
+	//CComBSTR bstrWKT;
+	//// now reproject to WGS84 (to new shape)
+	//CComPtr<IShape> wgsShape = NULL;
+	//ComHelper::CreateShape(&wgsShape);
+	//wgsShape->Create(ShpfileType::SHP_POLYGON, &vb);
+	//long newIdx = -1;
+	//for (int i = 0; i <= 90; i++)
+	//{
+	//	// take from original shape
+	//	pShape->get_XY(i, &x, &y, &vb);
+	//	_MapProj->Transform(&x, &y, &vb);
+	//	// add to new shape (throw-away index)
+	//	wgsShape->AddPoint(x, y, &newIdx);
+	//}
+	//wgsShape->ExportToWKT(&bstrWKT);
 
 	CAtlString strResult;
-	strResult.Format("%d%s%s", idx, ch31, CAtlString(bstrWKT));
+	//strResult.Format("%d%s%s", idx, ch31, CAtlString(bstrWKT));
+	strResult.Format("%d", idx);
 	CComBSTR bstrResult((LPCTSTR)strResult);
 	return bstrResult;
 }
@@ -1261,21 +1265,25 @@ LONG CMapView::PlaceGeometryByWKT(LONG LayerHandle, LPCTSTR WKT)
 		// fill the shape based on the WKT
 		CComBSTR bstr(WKT);
 		shp->ImportFromWKT(bstr, &vb);
-		// transform to the map projection
-		long count;
-		double x, y;
-		shp->get_NumPoints(&count);
-		for (int i = 0; i < count; i++)
+		// ok?
+		if (vb == VARIANT_TRUE)
 		{
-			shp->get_XY(i, &x, &y, &vb);
-			_WGS84->Transform(&x, &y, &vb);
-			shp->put_XY(i, x, y, &vb);
-		}
-		// add the shape to the layer
-		if (sf->StartEditingShapes(VARIANT_TRUE, NULL, &vb) == S_OK && vb == VARIANT_TRUE)
-		{
-			sf->EditAddShape(shp, &idx);
-			sf->StopEditingShapes((idx >= 0) ? VARIANT_TRUE : VARIANT_FALSE, (idx >= 0) ? VARIANT_TRUE : VARIANT_FALSE, NULL, &vb);
+			// transform to the map projection
+			long count;
+			double x, y;
+			shp->get_NumPoints(&count);
+			for (int i = 0; i < count; i++)
+			{
+				shp->get_XY(i, &x, &y, &vb);
+				_WGS84->Transform(&x, &y, &vb);
+				shp->put_XY(i, x, y, &vb);
+			}
+			// add the shape to the layer
+			if (sf->StartEditingShapes(VARIANT_TRUE, NULL, &vb) == S_OK && vb == VARIANT_TRUE)
+			{
+				sf->EditAddShape(shp, &idx);
+				sf->StopEditingShapes((idx >= 0) ? VARIANT_TRUE : VARIANT_FALSE, (idx >= 0) ? VARIANT_TRUE : VARIANT_FALSE, NULL, &vb);
+			}
 		}
 	}
 	// return shape index
@@ -1371,9 +1379,11 @@ void CMapView::SetPointDiameter(LONG Meters)
 // ****************************************************************** 
 //		ZoomToGeometry
 // ****************************************************************** 
-void CMapView::ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor)
+double CMapView::ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	double scale = this->GetCurrentScale();
 
 	// get Shapefile reference
 	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
@@ -1406,9 +1416,46 @@ void CMapView::ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFacto
 			this->LockWindow(tkLockMode::lmLock);
 			this->SetExtents(ext);
 			this->ZoomOut(max(0.0, ZoomFactor - 1.0));
+			// compare current scale with minimum setting
+			scale = this->GetCurrentScale();
+			double minScale = this->GetLayerMinVisibleScale(LayerHandle);
+			if (scale < minScale)
+			{
+				// bring it back out
+				this->SetCurrentScale(minScale);
+				scale = minScale;
+			}
 			this->LockWindow(tkLockMode::lmUnlock);
 		}
 	}
+	// return current scale
+	return scale;
 }
 
+
+// ***************************************************************
+//		GetGeometryWKT()
+// ***************************************************************
+BSTR CMapView::GetGeometryWKT(LONG LayerHandle, LONG GeomHandle)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	CComBSTR bstrWKT("");
+
+	// get Shapefile reference
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// get Shape
+		CComPtr<IShape> shp = NULL;
+		sf->get_Shape(GeomHandle, &shp);
+		if (shp)
+		{
+			// get WKT string
+			shp->ExportToWKT(&bstrWKT);
+		}
+	}
+	// return result
+	return bstrWKT;
+}
 

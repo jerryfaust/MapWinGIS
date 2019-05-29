@@ -7124,7 +7124,8 @@ library MapWinGIS
 			[id(293)] LONG CopyGeometryByHandle(LONG SourceLayerHandle, LONG SourceGeomHandle, LONG TargetLayerHandle);
 			[id(294)] void SetCellValues(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValuePairs);
 			[id(295)] void SetPointDiameter(LONG Meters);
-			[id(296)] void ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor);
+			[id(296)] DOUBLE ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor);
+			[id(297)] BSTR GetGeometryWKT(LONG LayerHandle, LONG GeomHandle);
 
 #endif			
 

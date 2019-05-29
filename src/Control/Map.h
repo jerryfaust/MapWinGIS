@@ -652,7 +652,8 @@ public:
 	afx_msg LONG CopyGeometryByHandle(LONG SourceLayerHandle, LONG SourceGeomHandle, LONG TargetLayerHandle);
 	afx_msg void SetCellValues(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValuePairs);
 	afx_msg void SetPointDiameter(LONG Meters);
-	afx_msg void ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor);
+	afx_msg DOUBLE ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor);
+	afx_msg BSTR GetGeometryWKT(LONG LayerHandle, LONG GeomHandle);
 
 #pragma endregion
 
