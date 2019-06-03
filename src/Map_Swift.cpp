@@ -255,7 +255,7 @@ void CMapView::SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG 
 					labels->put_FrameOutlineColor(0);
 					labels->put_InboxAlignment(tkLabelAlignment::laBottomCenter);
 					// labels
-					labels->put_Alignment(tkLabelAlignment::laCenter);
+					labels->put_Alignment(tkLabelAlignment::laBottomCenter);
 					labels->put_AutoOffset(VARIANT_TRUE);
 				}
 				else if (sfType == ShpfileType::SHP_POLYLINE)
@@ -1396,26 +1396,27 @@ double CMapView::ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFac
 		{
 			// get Shape extents (special consideration for Points)
 			CComPtr<IExtents> ext = NULL;
-			ShpfileType shapeType;
-			shp->get_ShapeType2D(&shapeType);
-			if (shapeType == ShpfileType::SHP_POINT)
-			{
-				// create extents from point
-				double x, y;
-				VARIANT_BOOL vb;
-				shp->get_XY(0, &x, &y, &vb);
-				ComHelper::CreateExtents(&ext);
-				ext->SetBounds(x - (PointDiameter / 2.0), y - (PointDiameter / 2.0), 0.0, x + (PointDiameter / 2.0), y + (PointDiameter / 2.0), 0.0);
-			}
-			else
-			{
+			//ShpfileType shapeType;
+			//shp->get_ShapeType2D(&shapeType);
+			//if (shapeType == ShpfileType::SHP_POINT)
+			//{
+			//	// create extents from point
+			//	double x, y;
+			//	VARIANT_BOOL vb;
+			//	shp->get_XY(0, &x, &y, &vb);
+			//	ComHelper::CreateExtents(&ext);
+			//	ext->SetBounds(x - (PointDiameter / 2.0), y - (PointDiameter / 2.0), 0.0, x + (PointDiameter / 2.0), y + (PointDiameter / 2.0), 0.0);
+			//}
+			//else
+			//{
 				// get extents
 				shp->get_Extents(&ext);
-			}
+			//}
 			// now zoom to extents
 			this->LockWindow(tkLockMode::lmLock);
 			this->SetExtents(ext);
-			this->ZoomOut(max(0.0, ZoomFactor - 1.0));
+			if (ZoomFactor > 1.0)
+				this->ZoomOut(max(0.0, ZoomFactor - 1.0));
 			// compare current scale with minimum setting
 			scale = this->GetCurrentScale();
 			double minScale = this->GetLayerMinVisibleScale(LayerHandle);
@@ -1458,4 +1459,43 @@ BSTR CMapView::GetGeometryWKT(LONG LayerHandle, LONG GeomHandle)
 	// return result
 	return bstrWKT;
 }
+
+
+// ***************************************************************
+//		GetCurrentCenter()
+// ***************************************************************
+void CMapView::GetCurrentCenter(DOUBLE* Longitude, DOUBLE* Latitude)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// initialize for error
+	*Longitude = 0.0;
+	*Latitude = 0.0;
+
+	// get current map extent
+	CComPtr<IExtents> ext = this->GetExtents();
+	// do we have something?
+	if (ext)
+	{
+		double x, y;
+		CComPtr<IPoint> center;
+		// get the center point
+		ext->get_Center(&center);
+		if (center)
+		{
+			center->get_X(&x);
+			center->get_Y(&y);
+			// reproject to DMS
+			VARIANT_BOOL vb;
+			_MapProj->Transform(&x, &y, &vb);
+			// success?
+			if (vb == VARIANT_TRUE)
+			{
+				*Longitude = x;
+				*Latitude = y;
+			}
+		}
+	}
+}
+
 

@@ -7126,6 +7126,7 @@ library MapWinGIS
 			[id(295)] void SetPointDiameter(LONG Meters);
 			[id(296)] DOUBLE ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor);
 			[id(297)] BSTR GetGeometryWKT(LONG LayerHandle, LONG GeomHandle);
+			[id(298)] void GetCurrentCenter(DOUBLE* Longitude, DOUBLE* Latitude);
 
 #endif			
 

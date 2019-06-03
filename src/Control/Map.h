@@ -654,6 +654,7 @@ public:
 	afx_msg void SetPointDiameter(LONG Meters);
 	afx_msg DOUBLE ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor);
 	afx_msg BSTR GetGeometryWKT(LONG LayerHandle, LONG GeomHandle);
+	afx_msg void GetCurrentCenter(DOUBLE* Longitude, DOUBLE* Latitude);
 
 #pragma endregion
 
