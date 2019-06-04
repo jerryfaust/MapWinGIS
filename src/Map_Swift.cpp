@@ -923,6 +923,9 @@ LONG CMapView::AddUserLayer(LONG GeometryType, LPCTSTR Columns, BOOL Visible)
 			ComHelper::CreateInstance(idGeoProjection, (IDispatch**)&_MapProj);
 			this->GetGeoProjection()->Clone(&_MapProj);
 			_MapProj->StartTransform(_WGS84, &vb);
+
+			this->GetMeasuring()->put_MeasuringType(tkMeasuringType::MeasureDistance);
+			this->GetMeasuring()->put_LengthUnits(tkLengthDisplayMode::ldmAmerican);
 		}
 
 		return layerHandle;

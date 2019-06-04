@@ -92,7 +92,10 @@ int CMapWinGISApp::ExitInstance()
 	#ifndef RELEASE_MODE
 
 	CComBSTR bstr;
-	GetUtils()->get_ComUsageReport(VARIANT_TRUE, &bstr);
+	if (m_utils)
+	{
+		m_utils->get_ComUsageReport(VARIANT_TRUE, &bstr);
+	}
 
 	USES_CONVERSION;
 	CString s = OLE2A(bstr);
@@ -100,7 +103,8 @@ int CMapWinGISApp::ExitInstance()
 
 	#endif
 
-	if (m_utils) {
+	if (m_utils)
+	{
 		m_utils->Release();
 	}
 

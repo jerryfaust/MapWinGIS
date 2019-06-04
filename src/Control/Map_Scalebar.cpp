@@ -237,6 +237,10 @@ void CMapView::DrawScaleBar(Gdiplus::Graphics* g)
 			int valHeight = (i == 0 || i == count) ? segmHeight * 2 : segmHeight;	// the height of the mark; side marks are longer
 			parts.push_back(new Gdiplus::Rect(length, barHeight - yPadding - valHeight, 0, valHeight));
 		}
+
+		// draw a white box behind the scalebar
+		Gdiplus::Rect r(0, -yPadding, length + ((step * count > 999) ? 4 : 3) * xPadding, barHeight + yPadding);
+		g->FillRectangle(&_brushWhite, r);
 	}
 	else
 	{
