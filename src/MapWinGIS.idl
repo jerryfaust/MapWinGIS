@@ -7097,7 +7097,7 @@ library MapWinGIS
 			[id(261), propput] void UseAlternatePanCursor(VARIANT_BOOL nNewValue);
 			[id(262), propget] VARIANT_BOOL RecenterMapOnZoom();
 			[id(262), propput] void RecenterMapOnZoom(VARIANT_BOOL nNewValue);
-			// custom
+			// custom API for Swift Map Server
 			[id(270)] VARIANT_BOOL SetConstrainingExtents(DOUBLE xMin, DOUBLE yMin, DOUBLE xMax, DOUBLE yMax);
 			[id(271)] void FreezeCurrentExtents();
 			[id(272)] void SetLayerLabelMaxScale(LONG LayerHandle, DOUBLE maxScale);
@@ -7107,7 +7107,7 @@ library MapWinGIS
 			[id(276)] void SetLayerLabelAttributes(LONG LayerHandle, BSTR FontName, LONG FontSize, VARIANT_BOOL ScaledFonts);
 			[id(277)] void SetLayerLabelScaling(LONG LayerHandle, LONG FontSize, DOUBLE RelativeScale);
 			[id(278)] void SetLayerLabelHalo(LONG LayerHandle, LONG HaloSize, LONG HaloColor);
-			[id(279)] void SetLayerLabelShadow(LONG LayerHandle, LONG OffsetX, LONG OffsetY, LONG ShadowColor);
+			[id(279)] void SetLayerLabelFrame(LONG LayerHandle, LONG BackColor, LONG FrameColor);
 			[id(280)] void SetLayerLabelFont(LONG LayerHandle, BSTR FontName, LONG FontSize, LONG FontColor, VARIANT_BOOL FontBold, VARIANT_BOOL FontItalic, DOUBLE RelativeScale);
 			[id(281)] void GenerateLayerLabels(LONG LayerHandle);
 			[id(282)] LONG AddLayerAndResave(BSTR Filename, VARIANT_BOOL Visible);
@@ -7124,9 +7124,13 @@ library MapWinGIS
 			[id(293)] LONG CopyGeometryByHandle(LONG SourceLayerHandle, LONG SourceGeomHandle, LONG TargetLayerHandle);
 			[id(294)] void SetCellValues(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValuePairs);
 			[id(295)] void SetPointDiameter(LONG Meters);
-			[id(296)] DOUBLE ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor);
+			[id(296)] DOUBLE ZoomToGeometry(LONG LayerHandle, LONG GeomHandle);
 			[id(297)] BSTR GetGeometryWKT(LONG LayerHandle, LONG GeomHandle);
 			[id(298)] void GetCurrentCenter(DOUBLE* Longitude, DOUBLE* Latitude);
+			[id(299)] void LockWindowEx();
+			[id(300)] void UnlockWindowEx(tkRedrawType redrawType);
+			[id(301)] void SetMeasuringType(tkMeasuringType MeasuringType);
+			[id(302)] void ClearMeasuring();
 
 #endif			
 

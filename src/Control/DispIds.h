@@ -3,6 +3,10 @@ enum {		//{{AFX_DISP_ID(CMapView)
 	// NOTE: ClassWizard will add and remove enumeration elements here
 	//    DO NOT EDIT what you see in these blocks of generated code !
 	// **ClassWizard is a thing of the past... feel free to edit this code.
+	dispidClearMeasuring = 302L,
+	dispidSetMeasuringType = 301L,
+	dispidUnlockWindowEx = 300L,
+	dispidLockWindowEx = 299L,
 	dispidGetCurrentCenter = 298L,
 	dispidGetGeometryWKT = 297L,
 	dispidZoomToGeometry = 296L,
@@ -22,7 +26,7 @@ enum {		//{{AFX_DISP_ID(CMapView)
 	dispidAddLayerAndResave = 282L,
 	dispidGenerateLayerLabels = 281L,
 	dispidSetLayerLabelFont = 280L,
-	dispidSetLayerLabelShadow = 279L,
+	dispidSetLayerLabelFrame = 279L,
 	dispidSetLayerLabelHalo = 278L,
 	dispidSetLayerLabelScaling = 277L,
 	dispidSetLayerLabelAttributes = 276L,

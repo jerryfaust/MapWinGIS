@@ -635,7 +635,7 @@ public:
 	afx_msg void SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, BOOL ScaledFonts);
 	afx_msg void SetLayerLabelScaling(LONG LayerHandle, LONG FontSize, DOUBLE RelativeScale);
 	afx_msg void SetLayerLabelHalo(LONG LayerHandle, LONG HaloSize, LONG HaloColor);
-	afx_msg void SetLayerLabelShadow(LONG LayerHandle, LONG OffsetX, LONG OffsetY, LONG ShadowColor);
+	afx_msg void SetLayerLabelFrame(LONG LayerHandle, LONG BackColor, LONG FrameColor);
 	afx_msg void SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, LONG FontColor, BOOL FontBold, BOOL FontItalic, DOUBLE RelativeScale);
 	afx_msg void GenerateLayerLabels(LONG LayerHandle);
 	afx_msg long AddLayerAndResave(LPCTSTR Filename, BOOL visible);
@@ -652,9 +652,13 @@ public:
 	afx_msg LONG CopyGeometryByHandle(LONG SourceLayerHandle, LONG SourceGeomHandle, LONG TargetLayerHandle);
 	afx_msg void SetCellValues(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValuePairs);
 	afx_msg void SetPointDiameter(LONG Meters);
-	afx_msg DOUBLE ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor);
+	afx_msg DOUBLE ZoomToGeometry(LONG LayerHandle, LONG GeomHandle);
 	afx_msg BSTR GetGeometryWKT(LONG LayerHandle, LONG GeomHandle);
 	afx_msg void GetCurrentCenter(DOUBLE* Longitude, DOUBLE* Latitude);
+	afx_msg void LockWindowEx();
+	afx_msg void UnlockWindowEx(tkRedrawType RedrawType);
+	afx_msg void SetMeasuringType(tkMeasuringType MeasuringType);
+	afx_msg void ClearMeasuring();
 
 #pragma endregion
 

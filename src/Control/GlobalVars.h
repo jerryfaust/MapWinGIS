@@ -51,7 +51,7 @@ const int EPSG_AMERSFOORT = 28992;
 const double SNAP_TOLERANCE = 20;  // pixels
 const double MOUSE_CLICK_TOLERANCE = 20;  // pixels
 const double POINT_INSERT_TOLERANCE = 10;  // pixels
-const int MAX_LABEL_SIZE = 108;
+const int MAX_LABEL_SIZE = 32; // 108;
 
 #define MAX_BUFFER 512
 

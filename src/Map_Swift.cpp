@@ -209,6 +209,8 @@ void CMapView::SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG 
 		IShapefile* sf = GetShapefile(LayerHandle);
 		if (sf)
 		{
+			//CComBSTR bstrColumn((LPCTSTR)strColumn);
+			//sf->put_SortField(bstrColumn);
 			// Labels reference
 			ILabels* labels = nullptr;
 			sf->get_Labels(&labels);
@@ -250,10 +252,10 @@ void CMapView::SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG 
 					//// center label below
 					//labelPos = tkLabelPositioning::lpCenter;
 					// use square frame
-					labels->put_FrameVisible(VARIANT_TRUE);
-					labels->put_FrameType(tkLabelFrameType::lfRectangle);
-					labels->put_FrameOutlineColor(0);
-					labels->put_InboxAlignment(tkLabelAlignment::laBottomCenter);
+					//labels->put_FrameVisible(VARIANT_TRUE);
+					//labels->put_FrameType(tkLabelFrameType::lfRectangle);
+					//labels->put_FrameOutlineColor(0);
+					//labels->put_InboxAlignment(tkLabelAlignment::laBottomCenter);
 					// labels
 					labels->put_Alignment(tkLabelAlignment::laBottomCenter);
 					labels->put_AutoOffset(VARIANT_TRUE);
@@ -316,6 +318,10 @@ void CMapView::SetLayerLabelScaling(LONG LayerHandle, LONG FontSize, DOUBLE Rela
 			labels->put_BasicScale(RelativeScale);
 			labels->put_FontSize(FontSize);
 
+			//labels->put_LogScaleForSize(VARIANT_TRUE);
+			//labels->put_UseVariableSize(VARIANT_TRUE);
+			//labels->put_FontSize2(FontSize + 6);
+
 			// release Labels reference
 			labels->Release();
 		}
@@ -351,9 +357,9 @@ void CMapView::SetLayerLabelHalo(LONG LayerHandle, LONG HaloSize, LONG HaloColor
 
 
 // ****************************************************************** 
-//		SetLayerLabelShadow
+//		SetLayerLabelFrame
 // ****************************************************************** 
-void CMapView::SetLayerLabelShadow(LONG LayerHandle, LONG OffsetX, LONG OffsetY, LONG ShadowColor)
+void CMapView::SetLayerLabelFrame(LONG LayerHandle, LONG BackColor, LONG FrameColor)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -366,10 +372,10 @@ void CMapView::SetLayerLabelShadow(LONG LayerHandle, LONG OffsetX, LONG OffsetY,
 		sf->get_Labels(&labels);
 		if (labels != nullptr)
 		{
-			labels->put_ShadowVisible(VARIANT_TRUE);
-			labels->put_ShadowOffsetX(OffsetX);
-			labels->put_ShadowOffsetY(OffsetY);
-			labels->put_ShadowColor(ShadowColor);
+			labels->put_FrameVisible(VARIANT_TRUE);
+			labels->put_FrameBackColor(BackColor);
+			labels->put_FrameOutlineColor(FrameColor);
+			labels->put_InboxAlignment(tkLabelAlignment::laBottomCenter);
 
 			// release Labels reference
 			labels->Release();
@@ -792,24 +798,94 @@ BSTR CMapView::QueryLayer(LONG LayerHandle, LPCTSTR WhereClause)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
-	CAtlString strResult("Query Results");
-	CComBSTR result("Query Results");
+	CAtlString strResult("");
 
-	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
-	if (sf)
+	// make sure we've got the Search layer
+	CComPtr<IShapefile> sLayer = GetShapefile(LayerHandle);
+	if (!sLayer)
+	{
+		strResult.Format("Query layer with handle = '%d' not found", LayerHandle);
+	}
+	else
 	{
 		ITable* tab = nullptr;
-		sf->get_Table(&tab);
+		sLayer->get_Table(&tab);
 		if (tab)
 		{
 			CComBSTR expression(WhereClause);
 			CComBSTR errorString;
-			VARIANT results;
+			CComVariant results;
 			VARIANT_BOOL vb;
 			tab->Query(expression, &results, &errorString, &vb);
 			if (vb != VARIANT_FALSE)
 			{
-
+				// get user-specified column values
+				long* pData;
+				long uBound, lBound;
+				SafeArrayAccessData(results.parray, (void**)&pData);
+				SafeArrayGetLBound(results.parray, 1, &lBound);
+				SafeArrayGetUBound(results.parray, 1, &uBound);
+				for (int i = lBound; i <= uBound; i++)
+				{
+					// current shape index (GeomHandle)
+					long shapeIdx = (long)(pData[i]);
+					// iterate list of field indexes
+					CComVariant sValue;
+					long numFields = (_featureColumns[LayerHandle]).size();
+					if (numFields == 0)
+					{
+						CAtlString gh;
+						gh.Format("%d", shapeIdx);
+						// no fields, just set GeomHandle
+						if (strResult.GetLength() == 0)
+						{
+							// first entry
+							strResult = gh;
+						}
+						else
+						{
+							// append start of feature
+							strResult.Append(gh);
+						}
+					}
+					else
+					{
+						for (long idx = 0; idx < numFields; idx++)
+						{
+							long fieldIdx = (_featureColumns[LayerHandle]).at(idx);
+							// get next value, convert to string
+							sLayer->get_CellValue(fieldIdx, shapeIdx, &sValue);
+							CAtlString val(sValue);
+							// on first row entry of feature, prepend GeomHandle
+							if (idx == 0)
+							{
+								// prepend GeomHandle to first field value
+								if (strResult.GetLength() == 0)
+								{
+									// very first entry
+									strResult.Format("%d%s%s", shapeIdx, ch31, val);
+								}
+								else
+								{
+									// append start of feature
+									strResult.Format("%s%d%s%s", strResult, shapeIdx, ch31, val);
+								}
+							}
+							else if (idx < numFields)
+							{
+								// intermediate field value
+								strResult.Format("%s%s%s", strResult, ch31, val);
+							}
+							else
+							{
+								// last field value
+								strResult.Append(val);
+							}
+						}
+					}
+					// if not on last entry, add ch30 separator
+					if (i < uBound) strResult.Append(ch30);
+				}
 			}
 		}
 	}
@@ -924,8 +1000,11 @@ LONG CMapView::AddUserLayer(LONG GeometryType, LPCTSTR Columns, BOOL Visible)
 			this->GetGeoProjection()->Clone(&_MapProj);
 			_MapProj->StartTransform(_WGS84, &vb);
 
-			this->GetMeasuring()->put_MeasuringType(tkMeasuringType::MeasureDistance);
+			//this->GetMeasuring()->put_MeasuringType(tkMeasuringType::MeasureDistance);
 			this->GetMeasuring()->put_LengthUnits(tkLengthDisplayMode::ldmAmerican);
+			this->GetMeasuring()->put_AreaUnits(tkAreaDisplayMode::admAmerican);
+			this->GetMeasuring()->put_Persistent(VARIANT_TRUE);
+			//this->GetMeasuring()->put_MeasuringType(tkMeasuringType::MeasureArea);
 		}
 
 		return layerHandle;
@@ -1382,7 +1461,7 @@ void CMapView::SetPointDiameter(LONG Meters)
 // ****************************************************************** 
 //		ZoomToGeometry
 // ****************************************************************** 
-double CMapView::ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFactor)
+double CMapView::ZoomToGeometry(LONG LayerHandle, LONG GeomHandle)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -1416,20 +1495,21 @@ double CMapView::ZoomToGeometry(LONG LayerHandle, LONG GeomHandle, FLOAT ZoomFac
 				shp->get_Extents(&ext);
 			//}
 			// now zoom to extents
-			this->LockWindow(tkLockMode::lmLock);
+			//this->LockWindow(tkLockMode::lmLock);
 			this->SetExtents(ext);
-			if (ZoomFactor > 1.0)
-				this->ZoomOut(max(0.0, ZoomFactor - 1.0));
-			// compare current scale with minimum setting
+			//if (ZoomFactor > 1.0)
+			//	this->ZoomOut(max(0.0, ZoomFactor - 1.0));
+			// get new scale
 			scale = this->GetCurrentScale();
-			double minScale = this->GetLayerMinVisibleScale(LayerHandle);
-			if (scale < minScale)
-			{
-				// bring it back out
-				this->SetCurrentScale(minScale);
-				scale = minScale;
-			}
-			this->LockWindow(tkLockMode::lmUnlock);
+			//// compare current scale with minimum setting
+			//double minScale = this->GetLayerMinVisibleScale(LayerHandle);
+			//if (scale < minScale)
+			//{
+			//	// bring it back out
+			//	this->SetCurrentScale(minScale);
+			//	scale = minScale;
+			//}
+			//this->LockWindow(tkLockMode::lmUnlock);
 		}
 	}
 	// return current scale
@@ -1501,4 +1581,62 @@ void CMapView::GetCurrentCenter(DOUBLE* Longitude, DOUBLE* Latitude)
 	}
 }
 
+
+// *************************************************
+//			LockWindowEx()						  
+// *************************************************
+void CMapView::LockWindowEx()
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// increment the lock count
+	_lockCount++;
+}
+
+
+// *************************************************
+//			UnlockWindowEx()						  
+// *************************************************
+void CMapView::UnlockWindowEx(tkRedrawType RedrawType)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	if (_lockCount == 0)
+	{
+		return;    // no need to schedule more buffer reloads
+	}
+
+	// decrement the lock count
+	_lockCount--;
+
+	// are all locks released?
+	if (_lockCount == 0)
+	{
+		RedrawCore(RedrawType, (RedrawType == tkRedrawType::RedrawSkipDataLayers) ? true : false);
+	}
+}
+
+
+// *************************************************
+//			SetMeasuringType()						  
+// *************************************************
+void CMapView::SetMeasuringType(tkMeasuringType MeasuringType)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// set the setting in the measuring class
+	this->GetMeasuring()->put_MeasuringType(MeasuringType);
+	this->SetCursorMode(tkCursorMode::cmMeasure);
+}
+
+// *************************************************
+//			ClearMeasuring()						  
+// *************************************************
+void CMapView::ClearMeasuring()
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// increment the lock count
+	this->GetMeasuring()->Clear();
+}
 
