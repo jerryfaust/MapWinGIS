@@ -871,15 +871,10 @@ BSTR CMapView::QueryLayer(LONG LayerHandle, LPCTSTR WhereClause)
 									strResult.Format("%s%d%s%s", strResult, shapeIdx, ch31, val);
 								}
 							}
-							else if (idx < numFields)
+							else
 							{
 								// intermediate field value
 								strResult.Format("%s%s%s", strResult, ch31, val);
-							}
-							else
-							{
-								// last field value
-								strResult.Append(val);
 							}
 						}
 					}
@@ -1180,8 +1175,9 @@ BSTR CMapView::GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLa
 				ComHelper::CreateInstance(idShapefile, (IDispatch**)&defLayer);
 				defLayer->CreateNew(L"", ShpfileType::SHP_POLYGON, &vb);
 				defLayer->StartEditingShapes(VARIANT_TRUE, NULL, &vb);
-				// if definition geometry is a point, create a buffer around it
-				if ((vShape->get_ShapeType(&sfType) == S_OK) && (sfType == ShpfileType::SHP_POINT))
+				// if definition geometry is a point or a line, create a buffer around it
+				if ((vShape->get_ShapeType2D(&sfType) == S_OK) && 
+					(sfType == ShpfileType::SHP_POINT || sfType == ShpfileType::SHP_POLYLINE))
 				{
 					// add buffer
 					vShape->Buffer(SearchTolerance, 180, &bufferedShape);
@@ -1396,6 +1392,8 @@ LONG CMapView::CopyGeometryByHandle(LONG SourceLayerHandle, LONG SourceGeomHandl
 			if (target->StartEditingShapes(VARIANT_TRUE, NULL, &vb) == S_OK && vb == VARIANT_TRUE)
 			{
 				CComPtr<IShape> newShp = NULL;
+				// test
+				//shp->Buffer(20, 180, &newShp);
 				// set copy into target layer
 				shp->Clone(&newShp);
 				target->EditAddShape(newShp, &TargetGeomHandle);
@@ -1525,6 +1523,7 @@ BSTR CMapView::GetGeometryWKT(LONG LayerHandle, LONG GeomHandle)
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	CComBSTR bstrWKT("");
+	CString strResult;
 
 	// get Shapefile reference
 	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
@@ -1535,9 +1534,38 @@ BSTR CMapView::GetGeometryWKT(LONG LayerHandle, LONG GeomHandle)
 		sf->get_Shape(GeomHandle, &shp);
 		if (shp)
 		{
+			VARIANT_BOOL vb;
+			// create a copy for the transformed shape
+			CComPtr<IShape> pShape = NULL;
+			ComHelper::CreateShape(&pShape);
+			// of same type as original type
+			ShpfileType shpType;
+			shp->get_ShapeType2D(&shpType);
+			pShape->Create(shpType, &vb);
+			// transform from map projection to WGS84
+			long count, idx;
+			double x, y;
+			shp->get_NumPoints(&count);
+			for (int i = 0; i < count; i++)
+			{
+				shp->get_XY(i, &x, &y, &vb);
+				_MapProj->Transform(&x, &y, &vb);
+				// add to shape copy
+				pShape->AddPoint(x, y, &idx);
+			}
 			// get WKT string
-			shp->ExportToWKT(&bstrWKT);
+			pShape->ExportToWKT(&bstrWKT);
 		}
+		else
+		{
+			strResult.Format("Geometry with handle = '%d' not found", GeomHandle);
+			bstrWKT = (LPCTSTR)strResult;
+		}
+	}
+	else
+	{
+		strResult.Format("Layer with handle = '%d' not found", LayerHandle);
+		bstrWKT = (LPCTSTR)strResult;
 	}
 	// return result
 	return bstrWKT;
@@ -1640,3 +1668,48 @@ void CMapView::ClearMeasuring()
 	this->GetMeasuring()->Clear();
 }
 
+// ***************************************************************
+//		GetMeasureWKT()
+// ***************************************************************
+BSTR CMapView::GetMeasureWKT()
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	CComBSTR bstrWKT("");
+	CString strResult;
+
+	CComPtr<IShape> shp;
+	ComHelper::CreateShape(&shp);
+
+	int pointCount = this->GetMeasuringBase()->GetPointCount();
+	// bail out if no points
+	if (pointCount == 0)
+	{
+		this->GetMeasuring()->Clear();
+		return bstrWKT;
+	}
+
+	VARIANT_BOOL vb;
+	// what do we have?
+	if (this->GetMeasuringBase()->HasPolygon(false))
+		shp->Create(ShpfileType::SHP_POLYGON, &vb);
+	else if (this->GetMeasuringBase()->HasLine(false) && pointCount > 1)
+		shp->Create(ShpfileType::SHP_POLYLINE, &vb);
+	else
+		// nothing, return empty WKT
+		return bstrWKT;
+
+	// iterate points in shape
+	for (int idx = 0; idx < pointCount; idx++)
+	{
+		long newIdx;
+		// transfer to shape points
+		MeasurePoint* pPoint = this->GetMeasuringBase()->GetPoint(idx);
+		shp->AddPoint(pPoint->x, pPoint->y, &newIdx);
+	}
+	// get WKT
+	shp->ExportToWKT(&bstrWKT);
+	
+	// return result
+	return bstrWKT;
+}

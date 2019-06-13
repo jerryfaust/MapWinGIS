@@ -659,6 +659,7 @@ public:
 	afx_msg void UnlockWindowEx(tkRedrawType RedrawType);
 	afx_msg void SetMeasuringType(tkMeasuringType MeasuringType);
 	afx_msg void ClearMeasuring();
+	afx_msg BSTR GetMeasureWKT();
 
 #pragma endregion
 
@@ -701,8 +702,8 @@ public:
 			VARIANT_BOOL isFromCache = fromCache ? VARIANT_TRUE : VARIANT_FALSE;
 			FireEvent(eventidTilesLoaded, EVENT_PARAM(VTS_BOOL VTS_BSTR VTS_BOOL), isSnapShot, key, isFromCache);
 		}
-	void FireMeasuringChanged(tkMeasuringAction action)
-		{FireEvent(eventidMeasuringChanged,EVENT_PARAM(VTS_I4), action);}
+	void FireMeasuringChanged(tkMeasuringAction action, long pointCount)
+		{FireEvent(eventidMeasuringChanged,EVENT_PARAM(VTS_I4 VTS_I4), action, pointCount);}
 	void FireBeforeShapeEdit(LONG layerHandle, LONG shapeIndex, tkMwBoolean* Cancel)
 		{FireEvent(eventidBeforeShapeEdit, EVENT_PARAM(VTS_I4 VTS_I4 VTS_PI4), layerHandle, shapeIndex, Cancel);	}
 	void FireValidateShape(LONG LayerHandle, IDispatch* Shape, tkMwBoolean* Cancel)	

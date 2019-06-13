@@ -324,6 +324,7 @@ BEGIN_DISPATCH_MAP(CMapView, COleControl)
 	DISP_FUNCTION_ID(CMapView, "UnlockWindowEx", dispidUnlockWindowEx, UnlockWindowEx, VT_EMPTY, VTS_I4)
 	DISP_FUNCTION_ID(CMapView, "SetMeasuringType", dispidSetMeasuringType, SetMeasuringType, VT_EMPTY, VTS_I4)
 	DISP_FUNCTION_ID(CMapView, "ClearMeasuring", dispidClearMeasuring, ClearMeasuring, VT_EMPTY, VTS_NONE)
+	DISP_FUNCTION_ID(CMapView, "GetMeasureWKT", dispidGetMeasureWKT, GetMeasureWKT, VT_BSTR, VTS_NONE)
 
 END_DISPATCH_MAP()
 //}}AFX_DISPATCH_MAP

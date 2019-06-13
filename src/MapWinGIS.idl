@@ -7131,6 +7131,7 @@ library MapWinGIS
 			[id(300)] void UnlockWindowEx(tkRedrawType redrawType);
 			[id(301)] void SetMeasuringType(tkMeasuringType MeasuringType);
 			[id(302)] void ClearMeasuring();
+			[id(303)] BSTR GetMeasureWKT();
 
 #endif			
 
@@ -7190,7 +7191,7 @@ library MapWinGIS
 			[id(11)] void BeforeDrawing(long hdc, long xMin, long xMax, long yMin, long yMax, tkMwBoolean* Handled);
 			[id(12)] void AfterDrawing(long hdc, long xMin, long xMax, long yMin, long yMax, tkMwBoolean* Handled);
 			[id(13)] void TilesLoaded(VARIANT_BOOL snapshot, BSTR key, VARIANT_BOOL fromCache);
-			[id(14)] void MeasuringChanged(tkMeasuringAction action);
+			[id(14)] void MeasuringChanged(tkMeasuringAction action, long pointCount);
 			[id(16)] void BeforeShapeEdit(LONG LayerHandle, LONG ShapeIndex, tkMwBoolean* Cancel);
 			[id(17)] void ValidateShape(LONG LayerHandle, IShape* Shape, tkMwBoolean* Cancel);
 			[id(18)] void AfterShapeEdit(tkUndoOperation Operation, LONG LayerHandle, LONG ShapeIndex);

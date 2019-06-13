@@ -644,7 +644,7 @@ void CMapView::OnLButtonDown(UINT nFlags, CPoint point)
 
 				if (added)
 				{
-					FireMeasuringChanged(tkMeasuringAction::PointAdded);
+					FireMeasuringChanged(tkMeasuringAction::PointAdded, GetMeasuringBase()->GetPointCount());
 					if( m_sendMouseDown ) this->FireMouseDown( MK_LBUTTON, (short)vbflags, x, y );
 					RedrawCore(RedrawSkipDataLayers, true);
 				}
@@ -673,7 +673,7 @@ void CMapView::OnLButtonDblClk(UINT nFlags, CPoint point)
 	if (m_cursorMode == cmMeasure)
 	{
 		_measuring->FinishMeasuring();
-		FireMeasuringChanged(tkMeasuringAction::MesuringStopped);	
+		FireMeasuringChanged(tkMeasuringAction::MesuringStopped, GetMeasuringBase()->GetPointCount());
 		Redraw2(RedrawSkipDataLayers);
 		return;
 	}
@@ -1392,7 +1392,7 @@ void CMapView::UndoMeasuringPoint()
 	((CMeasuring*)_measuring)->UndoPoint(&redraw);
 	if (redraw)
 	{
-		FireMeasuringChanged(PointRemoved);
+		FireMeasuringChanged(PointRemoved, GetMeasuringBase()->GetPointCount());
 		Redraw2(RedrawSkipDataLayers);
 	}
 }
