@@ -635,10 +635,16 @@ void CMapView::OnLButtonDown(UINT nFlags, CPoint point)
 		case cmMeasure:
 			{
 				bool added = true;
-				if (snapping){
+				if (snapping)
+				{
+					int initialPointCount = GetMeasuringBase()->GetPointCount();
 					GetMeasuringBase()->HandleProjPointAdd(projX, projY);
+					// special handling for single-segment line measure
+					if (GetMeasuringBase()->SingleSegmentDistanceMeasure && GetMeasuringBase()->GetPointCount() == initialPointCount)
+						added = false;
 				}
-				else {
+				else 
+				{
 					added = GetMeasuringBase()->HandlePointAdd(x, y, ctrl);
 				}
 
@@ -672,6 +678,37 @@ void CMapView::OnLButtonDblClk(UINT nFlags, CPoint point)
 
 	if (m_cursorMode == cmMeasure)
 	{
+		// special handling for custom Circle measure (single-segment Distance measure)
+		if (GetMeasuringBase()->SingleSegmentDistanceMeasure == true)
+		{
+			double projX, projY;
+			// turn off single-point mode
+			GetMeasuringBase()->SingleSegmentDistanceMeasure = false;
+			// get keyboard flags
+			bool ctrl = (nFlags & MK_CONTROL) != 0;
+			bool shift = (nFlags & MK_SHIFT) != 0;
+			VARIANT_BOOL snapped = VARIANT_FALSE;
+			bool snapping = SnappingIsOn(nFlags);
+			// if snapping, see if snapped
+			if (snapping)
+			{
+				snapped = FindSnapPointCore(point.x, point.y, &projX, &projY);
+			}
+			// if not snapped, just convert current point
+			if (!snapped)
+				this->PixelToProjection(point.x, point.y, projX, projY);
+			// add last point
+			bool added = true;
+			if (snapping)
+			{
+				GetMeasuringBase()->HandleProjPointAdd(projX, projY);
+			}
+			else
+			{
+				added = GetMeasuringBase()->HandlePointAdd(point.x, point.y, ctrl);
+			}
+
+		}
 		_measuring->FinishMeasuring();
 		FireMeasuringChanged(tkMeasuringAction::MesuringStopped, GetMeasuringBase()->GetPointCount());
 		Redraw2(RedrawSkipDataLayers);
@@ -1298,11 +1335,18 @@ void CMapView::OnMouseMove(UINT nFlags, CPoint point)
 			}
 			break;
 		case cmEditShape:
+			{
+				if (_dragging.Start == _dragging.Move && !_dragging.HasMoved)
+					return;
+				if (HandleOnMouseMoveShapeEditor(point.x, point.y, nFlags))
+					refreshNeeded = true;
+			}
+			break;
+		case cmMeasure:
 		{
-			if (_dragging.Start == _dragging.Move && !_dragging.HasMoved)
-				return;
-			if (HandleOnMouseMoveShapeEditor(point.x, point.y, nFlags))
-				refreshNeeded = true;
+			// save current mouse position
+			_mouseX = point.x;
+			_mouseY = point.y;
 		}
 		break;
 	}

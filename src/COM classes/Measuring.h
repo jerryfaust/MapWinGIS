@@ -147,7 +147,9 @@ private:
 
 public:
 	MeasuringBase* GetBase() { return _measuring; }
-	
+
+	// custom handling of single-line distance measure
+	void SetSingleLineDistanceMeasure() { _measuring->SingleSegmentDistanceMeasure = true; }
 };
 
 OBJECT_ENTRY_AUTO(__uuidof(Measuring), CMeasuring)

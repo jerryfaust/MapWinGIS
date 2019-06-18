@@ -33,7 +33,9 @@ CComPtr<IGeoProjection> _MapProj = NULL;
 
 double SearchTolerance = 10.0;
 // minimum point diamter for zoom
-long PointDiameter = 100;
+long _PointDiameter = 100;
+// current measuring type (may be custom value)
+long _MeasuringType = 0;
 
 VARIANT_BOOL CMapView::SetConstrainingExtents(DOUBLE xMin, DOUBLE yMin, DOUBLE xMax, DOUBLE yMax)
 {
@@ -968,12 +970,18 @@ LONG CMapView::AddUserLayer(LONG GeometryType, LPCTSTR Columns, BOOL Visible)
 		sf->CreateNew(CComBSTR(""), ShpfileType::SHP_POLYGON, &vb);
 		if (vb == VARIANT_TRUE)
 		{
+			//FillColor = RGB(255, 165, 0);
+			//FillTransparency = 100;
+			//LineColor = RGB(255, 127, 0);
+			//LineWidth = 2.0f;
 			SetupLayerAttributes(sf, Columns);
 			// add layer to map
 			layerHandle = this->AddLayer((LPDISPATCH)sf, Visible);
 			// default rendering?
-			this->SetShapeLayerLineColor(layerHandle, 0xFFFF00);
-			this->SetShapeLayerFillColor(layerHandle, 0xFFFF00);
+			this->SetShapeLayerLineWidth(layerHandle, 2);
+			// colors to match measuring tool
+			this->SetShapeLayerLineColor(layerHandle, RGB(255, 127, 0)); // 0xFFFF00);
+			this->SetShapeLayerFillColor(layerHandle, RGB(255, 165, 0)); // 0xFFFF00);
 			this->SetShapeLayerFillTransparency(layerHandle, .30);
 		}
 		break;
@@ -1452,7 +1460,7 @@ void CMapView::SetPointDiameter(LONG Meters)
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	// save value
-	PointDiameter = Meters;
+	_PointDiameter = Meters;
 }
 
 
@@ -1485,7 +1493,7 @@ double CMapView::ZoomToGeometry(LONG LayerHandle, LONG GeomHandle)
 			//	VARIANT_BOOL vb;
 			//	shp->get_XY(0, &x, &y, &vb);
 			//	ComHelper::CreateExtents(&ext);
-			//	ext->SetBounds(x - (PointDiameter / 2.0), y - (PointDiameter / 2.0), 0.0, x + (PointDiameter / 2.0), y + (PointDiameter / 2.0), 0.0);
+			//	ext->SetBounds(x - (_PointDiameter / 2.0), y - (_PointDiameter / 2.0), 0.0, x + (_PointDiameter / 2.0), y + (_PointDiameter / 2.0), 0.0);
 			//}
 			//else
 			//{
@@ -1648,13 +1656,18 @@ void CMapView::UnlockWindowEx(tkRedrawType RedrawType)
 // *************************************************
 //			SetMeasuringType()						  
 // *************************************************
-void CMapView::SetMeasuringType(tkMeasuringType MeasuringType)
+void CMapView::SetMeasuringType(LONG MeasuringType)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	// set the setting in the measuring class
-	this->GetMeasuring()->put_MeasuringType(MeasuringType);
+	// Type 2 is our custom circle measuring, which we handle with a restricted single-segment Distance measure
+	this->GetMeasuring()->put_MeasuringType(MeasuringType == 2 ? tkMeasuringType::MeasureDistance : (tkMeasuringType)MeasuringType);
 	this->SetCursorMode(tkCursorMode::cmMeasure);
+	// measure type 2 restricts line drawing to one segment
+	this->GetMeasuringBase()->SingleSegmentDistanceMeasure = (MeasuringType == 2);
+	// save local value
+	_MeasuringType = MeasuringType;
 }
 
 // *************************************************
@@ -1664,9 +1677,129 @@ void CMapView::ClearMeasuring()
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
-	// increment the lock count
+	// clear all current measuring input
 	this->GetMeasuring()->Clear();
+	this->GetMeasuringBase()->SingleSegmentDistanceMeasure = false;
 }
+
+// *************************************************
+//			EndMeasuring()						  
+// *************************************************
+void CMapView::EndMeasuring()
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// end measuring, submitting last point at current mouse position
+	CPoint point(_mouseX, _mouseY);
+	// is the SHIFT key pressed
+	UINT kFlags = (GetKeyState(VK_SHIFT) & 0x8000) ? MK_SHIFT : 0;
+	// for standard measure types (0 or 1) we first have to submit a click
+	if (_MeasuringType < 2)
+		this->OnLButtonDown(kFlags, point);
+	// submit double-click with current mouse position
+	this->OnLButtonDblClk(kFlags, point);
+}
+
+
+//// local helper function
+//CComPtr<IShape> GetMeasureShape()
+//{
+//	VARIANT_BOOL vb;
+
+//// local helper function
+//CComPtr<IShape> GetMeasureShape()
+//{
+//	VARIANT_BOOL vb;
+//
+//	CComPtr<IShape> shp;
+//	ComHelper::CreateShape(&shp);
+//
+//	int pointCount = this->GetMeasuringBase()->GetPointCount();
+//	// bail out if no points
+//	if (pointCount == 0)
+//	{
+//		this->GetMeasuring()->Clear();
+//		return bstrWKT;
+//	}
+//
+//	// special handling of custom Circle measuring (type = 2)
+//	if (_MeasuringType == 2)
+//	{
+//		long idx;
+//		// create Polygon Shape
+//		shp->Create(ShpfileType::SHP_POLYGON, &vb);
+//		// radians conversion
+//		double radians = (2.0 * 3.14159265359 / 90.0);
+//		// center point
+//		double x, y;
+//		MeasurePoint* mp = GetMeasuringBase()->GetPoint(0);
+//		x = mp->x;
+//		y = mp->y;
+//		// radius
+//		double radius = GetMeasureRadius();
+//		// circle will be a clockwise polygon of points
+//		for (int i = 0; i <= 90; i++)
+//		{
+//			shp->AddPoint(x + radius * cos(i * radians), y - radius * sin(i * radians), &idx);
+//		}
+//		// reset the last point to the first point, since mathematically, they are not quite equal
+//		shp->get_XY(0, &x, &y, &vb);
+//		shp->put_XY(90, x, y, &vb);
+//	}
+//	else
+//	{
+//		// else use measuring data
+//		bool isPolygon;
+//		// what do we have?
+//		if (this->GetMeasuringBase()->HasPolygon(false))
+//		{
+//			shp->Create(ShpfileType::SHP_POLYGON, &vb);
+//			isPolygon = true;
+//		}
+//		else if (this->GetMeasuringBase()->HasLine(false) && pointCount > 1)
+//		{
+//			shp->Create(ShpfileType::SHP_POLYLINE, &vb);
+//			isPolygon = false;
+//		}
+//		else
+//			// nothing, return empty WKT
+//			return bstrWKT;
+//
+//		// iterate points in shape
+//		for (int idx = 0; idx < pointCount; idx++)
+//		{
+//			long newIdx;
+//			double x, y;
+//			// transfer to shape points
+//			MeasurePoint* pPoint = this->GetMeasuringBase()->GetPoint(idx);
+//			shp->AddPoint(pPoint->x, pPoint->y, &newIdx);
+//			// if on the first point...
+//			if (idx == 0)
+//			{
+//				// save the first point
+//				x = pPoint->x; y = pPoint->y;
+//			}
+//			// if on the last point of a polygon...
+//			if (idx == (pointCount - 1) && isPolygon)
+//			{
+//				// we don't know if the polygon came from the line drawing or the area drawing,
+//				// but if it came from the area, the last point is not equal to the first point
+//				if (pPoint->x != x || pPoint->y != y)
+//				{
+//					// add new last point, being the same as first point
+//					shp->AddPoint(x, y, &newIdx);
+//				}
+//			}
+//		}
+//	}
+//
+//	// get WKT
+//	shp->ExportToWKT(&bstrWKT);
+//
+//	// return result
+//	return bstrWKT;
+//}
+
 
 // ***************************************************************
 //		GetMeasureWKT()
@@ -1677,6 +1810,7 @@ BSTR CMapView::GetMeasureWKT()
 
 	CComBSTR bstrWKT("");
 	CString strResult;
+	VARIANT_BOOL vb;
 
 	CComPtr<IShape> shp;
 	ComHelper::CreateShape(&shp);
@@ -1689,27 +1823,102 @@ BSTR CMapView::GetMeasureWKT()
 		return bstrWKT;
 	}
 
-	VARIANT_BOOL vb;
-	// what do we have?
-	if (this->GetMeasuringBase()->HasPolygon(false))
-		shp->Create(ShpfileType::SHP_POLYGON, &vb);
-	else if (this->GetMeasuringBase()->HasLine(false) && pointCount > 1)
-		shp->Create(ShpfileType::SHP_POLYLINE, &vb);
-	else
-		// nothing, return empty WKT
-		return bstrWKT;
-
-	// iterate points in shape
-	for (int idx = 0; idx < pointCount; idx++)
+	// special handling of custom Circle measuring (type = 2)
+	if (_MeasuringType == 2)
 	{
-		long newIdx;
-		// transfer to shape points
-		MeasurePoint* pPoint = this->GetMeasuringBase()->GetPoint(idx);
-		shp->AddPoint(pPoint->x, pPoint->y, &newIdx);
+		long idx;
+		// create Polygon Shape
+		shp->Create(ShpfileType::SHP_POLYGON, &vb);
+		// radians conversion
+		double radians = (2.0 * 3.14159265359 / 90.0);
+		// center point
+		double x, y, x2, y2;
+		MeasurePoint* mp = GetMeasuringBase()->GetPoint(0);
+		x = mp->x;
+		y = mp->y;
+		mp = GetMeasuringBase()->GetPoint(1);
+		x2 = mp->x;
+		y2 = mp->y;
+		// we have to transform points to the map projection, build circle, then transform back
+		_WGS84->Transform(&x, &y, &vb);
+		_WGS84->Transform(&x2, &y2, &vb);
+		// radius
+		double radius = sqrt((x2 - x) * (x2 - x) + (y2 - y) * (y2 - y));
+		// circle will be a clockwise polygon of points
+		for (int i = 0; i <= 90; i++)
+		{
+			double newX = x + radius * cos(i * radians);
+			double newY = y - radius * sin(i * radians);
+			_MapProj->Transform(&newX, &newY, &vb);
+			shp->AddPoint(newX, newY, &idx);
+		}
+		// reset the last point to the first point, since mathematically, they are not quite equal
+		shp->get_XY(0, &x, &y, &vb);
+		shp->put_XY(90, x, y, &vb);
 	}
+	else
+	{
+		// else use measuring data
+		bool isPolygon;
+		// what do we have?
+		if (this->GetMeasuringBase()->HasPolygon(false))
+		{
+			shp->Create(ShpfileType::SHP_POLYGON, &vb);
+			isPolygon = true;
+		}
+		else if (this->GetMeasuringBase()->HasLine(false) && pointCount > 1)
+		{
+			shp->Create(ShpfileType::SHP_POLYLINE, &vb);
+			isPolygon = false;
+		}
+		else
+			// nothing, return empty WKT
+			return bstrWKT;
+
+		// iterate points in shape
+		for (int idx = 0; idx < pointCount; idx++)
+		{
+			long newIdx;
+			double x, y;
+			// transfer to shape points
+			MeasurePoint* pPoint = this->GetMeasuringBase()->GetPoint(idx);
+			shp->AddPoint(pPoint->x, pPoint->y, &newIdx);
+			// if on the first point...
+			if (idx == 0)
+			{
+				// save the first point
+				x = pPoint->x; y = pPoint->y;
+			}
+			// if on the last point of a polygon...
+			if (idx == (pointCount - 1) && isPolygon)
+			{
+				// we don't know if the polygon came from the line drawing or the area drawing,
+				// but if it came from the area, the last point is not equal to the first point
+				if (pPoint->x != x || pPoint->y != y)
+				{
+					// add new last point, being the same as first point
+					shp->AddPoint(x, y, &newIdx);
+				}
+			}
+		}
+	}
+
 	// get WKT
 	shp->ExportToWKT(&bstrWKT);
 	
 	// return result
 	return bstrWKT;
+}
+
+
+// ***************************************************************
+//		GetMeasureRadius()
+// ***************************************************************
+double CMapView::GetMeasureRadius()
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	long errCode;
+	// for custom Circle measure, the first segment is the radius
+	return GetMeasuringBase()->GetSegmentLength(0, errCode);
 }

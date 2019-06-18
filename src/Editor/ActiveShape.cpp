@@ -135,7 +135,7 @@ void ActiveShape::DrawData( Gdiplus::Graphics* g, bool dynamicBuffer,
 	bool hasPolygon = HasPolygon(dynamicBuffer); 
 	if (!hasLine && !hasPolygon && !_showSnapPoint) return;
 
-	_fillBrush.SetColor(Utility::OleColor2GdiPlus(FillColor, FillTransparency)) ;
+	_fillBrush.SetColor(Utility::OleColor2GdiPlus(FillColor, 0)); // FillTransparency));
 	_linePen.SetWidth(LineWidth);
 	_linePen.SetColor(Utility::OleColor2GdiPlus(LineColor, 255));
 	
@@ -641,6 +641,9 @@ bool ActiveShape::HandlePointAdd( double screenX, double screenY, bool ctrl )
 {
 	double projX, projY;
 
+	// custom handling for single-line distance measure
+	if (SingleSegmentDistanceMeasure && _points.size() == 1) return false;
+
 	int closePointIndex= -1;
 	bool closeOnPreviousVertex = ctrl && CloseOnPreviousVertex();
 	
@@ -683,6 +686,9 @@ bool ActiveShape::HandlePointAdd( double screenX, double screenY, bool ctrl )
 // *******************************************************
 void ActiveShape::AddPoint(double xProj, double yProj, double xScreen, double yScreen, PointPart part)
 {
+	// custom handling for single-line distance measure
+	if (SingleSegmentDistanceMeasure && _points.size() == 1) return;
+
 	ClearIfStopped();
 
 	_mousePoint.x = xScreen;

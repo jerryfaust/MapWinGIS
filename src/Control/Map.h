@@ -657,9 +657,11 @@ public:
 	afx_msg void GetCurrentCenter(DOUBLE* Longitude, DOUBLE* Latitude);
 	afx_msg void LockWindowEx();
 	afx_msg void UnlockWindowEx(tkRedrawType RedrawType);
-	afx_msg void SetMeasuringType(tkMeasuringType MeasuringType);
+	afx_msg void SetMeasuringType(LONG MeasuringType); // tkMeasuringType + custom
 	afx_msg void ClearMeasuring();
 	afx_msg BSTR GetMeasureWKT();
+	afx_msg DOUBLE GetMeasureRadius();
+	afx_msg void EndMeasuring();
 
 #pragma endregion
 
@@ -868,6 +870,8 @@ public:
 	std::map<long, CString> _labelColumns;
 	// vector of field indices by layer handle
 	std::map<long, vector<long>> _featureColumns;
+	// mouse position in screen coordinates
+	LONG _mouseX, _mouseY;
 
 	tkCustomState _panningInertia;			
 	BOOL _reuseTileBuffer;			

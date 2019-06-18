@@ -145,6 +145,9 @@ public:
 	
 	void SetMapCallback(IMapViewCallback* mapView, ShapeInputMode inputMode);
 
+	// custom handling of single-segment distance measure
+	bool SingleSegmentDistanceMeasure;
+
 	// -------------------------------------------------
 	//   Exposing properties
 	// -------------------------------------------------

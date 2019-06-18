@@ -7129,9 +7129,11 @@ library MapWinGIS
 			[id(298)] void GetCurrentCenter(DOUBLE* Longitude, DOUBLE* Latitude);
 			[id(299)] void LockWindowEx();
 			[id(300)] void UnlockWindowEx(tkRedrawType redrawType);
-			[id(301)] void SetMeasuringType(tkMeasuringType MeasuringType);
+			[id(301)] void SetMeasuringType(LONG MeasuringType);
 			[id(302)] void ClearMeasuring();
 			[id(303)] BSTR GetMeasureWKT();
+			[id(304)] DOUBLE GetMeasureRadius();
+			[id(305)] void EndMeasuring();
 
 #endif			
 
