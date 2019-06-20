@@ -1661,11 +1661,14 @@ void CMapView::SetMeasuringType(LONG MeasuringType)
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	// set the setting in the measuring class
-	// Type 2 is our custom circle measuring, which we handle with a restricted single-segment Distance measure
-	this->GetMeasuring()->put_MeasuringType(MeasuringType == 2 ? tkMeasuringType::MeasureDistance : (tkMeasuringType)MeasuringType);
+	// Type 2 is our custom circle measuring, and Type 3 is our custom point measuring,
+	// both of which we handle with a restricted single-segment Distance measure
+	this->GetMeasuring()->put_MeasuringType(MeasuringType >= 2 ? tkMeasuringType::MeasureDistance : (tkMeasuringType)MeasuringType);
 	this->SetCursorMode(tkCursorMode::cmMeasure);
 	// measure type 2 restricts line drawing to one segment
 	this->GetMeasuringBase()->SingleSegmentDistanceMeasure = (MeasuringType == 2);
+	// measure type 3 restricts line drawing to one point
+	this->GetMeasuringBase()->SinglePointDistanceMeasure = (MeasuringType == 3);
 	// save local value
 	_MeasuringType = MeasuringType;
 }
@@ -1679,7 +1682,21 @@ void CMapView::ClearMeasuring()
 
 	// clear all current measuring input
 	this->GetMeasuring()->Clear();
+	this->GetMeasuringBase()->SinglePointDistanceMeasure = false;
 	this->GetMeasuringBase()->SingleSegmentDistanceMeasure = false;
+}
+
+// *************************************************
+//			RemoveLastMeasuringPoint()						  
+// *************************************************
+void CMapView::RemoveLastMeasuringPoint()
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// undo the last-clicked measuring point
+	CPoint point(_mouseX, _mouseY);
+	// submit right-click with current mouse position
+	this->OnRButtonDown(0, point);
 }
 
 // *************************************************
@@ -1856,6 +1873,18 @@ BSTR CMapView::GetMeasureWKT()
 		shp->get_XY(0, &x, &y, &vb);
 		shp->put_XY(90, x, y, &vb);
 	}
+	else if (_MeasuringType == 3)
+	{
+		long idx;
+		// custom point measuring type
+		shp->Create(ShpfileType::SHP_POINT, &vb);
+		// get one and only point
+		double x, y;
+		MeasurePoint* mp = GetMeasuringBase()->GetPoint(0);
+		x = mp->x;
+		y = mp->y;
+		shp->AddPoint(x, y, &idx);
+	}
 	else
 	{
 		// else use measuring data
@@ -1921,4 +1950,27 @@ double CMapView::GetMeasureRadius()
 	long errCode;
 	// for custom Circle measure, the first segment is the radius
 	return GetMeasuringBase()->GetSegmentLength(0, errCode);
+}
+
+
+// ***************************************************************
+//		GetMeasurePoint()
+// ***************************************************************
+void CMapView::GetMeasurePoint(DOUBLE* pX, DOUBLE* pY)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// initialize for error
+	*pX = 0.0;
+	*pY = 0.0;
+
+	// we only need the zeroeth point
+	MeasurePoint* mp = GetMeasuringBase()->GetPoint(0);
+	
+	*pX = mp->x;
+	*pY = mp->y;
+
+	VARIANT_BOOL vb;
+	// transform to map coordinates
+	_WGS84->Transform(pX, pY, &vb);
 }

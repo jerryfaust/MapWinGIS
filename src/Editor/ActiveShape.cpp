@@ -641,6 +641,8 @@ bool ActiveShape::HandlePointAdd( double screenX, double screenY, bool ctrl )
 {
 	double projX, projY;
 
+	// custom handling for single-point distance measure
+	if (SinglePointDistanceMeasure && _points.size() == 0) return false;
 	// custom handling for single-line distance measure
 	if (SingleSegmentDistanceMeasure && _points.size() == 1) return false;
 
@@ -686,6 +688,8 @@ bool ActiveShape::HandlePointAdd( double screenX, double screenY, bool ctrl )
 // *******************************************************
 void ActiveShape::AddPoint(double xProj, double yProj, double xScreen, double yScreen, PointPart part)
 {
+	// custom handling for single-point distance measure
+	if (SinglePointDistanceMeasure && _points.size() == 0) return;
 	// custom handling for single-line distance measure
 	if (SingleSegmentDistanceMeasure && _points.size() == 1) return;
 

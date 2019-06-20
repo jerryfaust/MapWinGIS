@@ -7134,6 +7134,8 @@ library MapWinGIS
 			[id(303)] BSTR GetMeasureWKT();
 			[id(304)] DOUBLE GetMeasureRadius();
 			[id(305)] void EndMeasuring();
+			[id(306)] void RemoveLastMeasuringPoint();
+			[id(307)] void GetMeasurePoint(DOUBLE* pX, DOUBLE* pY);
 
 #endif			
 

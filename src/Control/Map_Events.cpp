@@ -639,8 +639,9 @@ void CMapView::OnLButtonDown(UINT nFlags, CPoint point)
 				{
 					int initialPointCount = GetMeasuringBase()->GetPointCount();
 					GetMeasuringBase()->HandleProjPointAdd(projX, projY);
-					// special handling for single-segment line measure
-					if (GetMeasuringBase()->SingleSegmentDistanceMeasure && GetMeasuringBase()->GetPointCount() == initialPointCount)
+					// special handling for single-point or single-segment line measures
+					if ((GetMeasuringBase()->SinglePointDistanceMeasure || GetMeasuringBase()->SingleSegmentDistanceMeasure)
+						&& GetMeasuringBase()->GetPointCount() == initialPointCount)
 						added = false;
 				}
 				else 
@@ -653,6 +654,11 @@ void CMapView::OnLButtonDown(UINT nFlags, CPoint point)
 					FireMeasuringChanged(tkMeasuringAction::PointAdded, GetMeasuringBase()->GetPointCount());
 					if( m_sendMouseDown ) this->FireMouseDown( MK_LBUTTON, (short)vbflags, x, y );
 					RedrawCore(RedrawSkipDataLayers, true);
+				}
+				else if (GetMeasuringBase()->SinglePointDistanceMeasure)
+				{
+					// we still need the MouseDown event even though a point wasn't added
+					if (m_sendMouseDown) this->FireMouseDown(MK_LBUTTON, (short)vbflags, x, y);
 				}
 			}
 			break;
@@ -678,11 +684,13 @@ void CMapView::OnLButtonDblClk(UINT nFlags, CPoint point)
 
 	if (m_cursorMode == cmMeasure)
 	{
-		// special handling for custom Circle measure (single-segment Distance measure)
-		if (GetMeasuringBase()->SingleSegmentDistanceMeasure == true)
+		// special handling for custom Point measure (single-point Distance measure)
+		//					or custom Circle measure (single-segment Distance measure)
+		if (GetMeasuringBase()->SinglePointDistanceMeasure || GetMeasuringBase()->SingleSegmentDistanceMeasure)
 		{
 			double projX, projY;
-			// turn off single-point mode
+			// turn off both single-point and single-segment modes
+			GetMeasuringBase()->SinglePointDistanceMeasure = false;
 			GetMeasuringBase()->SingleSegmentDistanceMeasure = false;
 			// get keyboard flags
 			bool ctrl = (nFlags & MK_CONTROL) != 0;
@@ -707,7 +715,6 @@ void CMapView::OnLButtonDblClk(UINT nFlags, CPoint point)
 			{
 				added = GetMeasuringBase()->HandlePointAdd(point.x, point.y, ctrl);
 			}
-
 		}
 		_measuring->FinishMeasuring();
 		FireMeasuringChanged(tkMeasuringAction::MesuringStopped, GetMeasuringBase()->GetPointCount());

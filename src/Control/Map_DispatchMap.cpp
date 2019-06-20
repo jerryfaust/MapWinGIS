@@ -327,6 +327,8 @@ BEGIN_DISPATCH_MAP(CMapView, COleControl)
 	DISP_FUNCTION_ID(CMapView, "GetMeasureWKT", dispidGetMeasureWKT, GetMeasureWKT, VT_BSTR, VTS_NONE)
 	DISP_FUNCTION_ID(CMapView, "GetMeasureRadius", dispidGetMeasureRadius, GetMeasureRadius, VT_R8, VTS_NONE)
 	DISP_FUNCTION_ID(CMapView, "EndMeasuring", dispidEndMeasuring, EndMeasuring, VT_EMPTY, VTS_NONE)
+	DISP_FUNCTION_ID(CMapView, "RemoveLastMeasuringPoint", dispidRemoveLastMeasuringPoint, RemoveLastMeasuringPoint, VT_EMPTY, VTS_NONE)
+	DISP_FUNCTION_ID(CMapView, "GetMeasurePoint", dispidGetMeasurePoint, GetMeasurePoint, VT_EMPTY, VTS_PR8 VTS_PR8)
 
 END_DISPATCH_MAP()
 //}}AFX_DISPATCH_MAP
