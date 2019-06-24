@@ -147,8 +147,6 @@ public:
 
 	// custom handling of single-segment distance measure
 	bool SingleSegmentDistanceMeasure;
-	// custom handling of single-point distance measure
-	bool SinglePointDistanceMeasure;
 
 	// -------------------------------------------------
 	//   Exposing properties

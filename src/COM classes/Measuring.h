@@ -148,8 +148,6 @@ private:
 public:
 	MeasuringBase* GetBase() { return _measuring; }
 
-	// custom handling of single-point distance measure
-	void SetSinglePointDistanceMeasure() { _measuring->SinglePointDistanceMeasure = true; }
 	// custom handling of single-line distance measure
 	void SetSingleLineDistanceMeasure() { _measuring->SingleSegmentDistanceMeasure = true; }
 };

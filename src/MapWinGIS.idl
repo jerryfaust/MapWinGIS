@@ -7133,9 +7133,10 @@ library MapWinGIS
 			[id(302)] void ClearMeasuring();
 			[id(303)] BSTR GetMeasureWKT();
 			[id(304)] DOUBLE GetMeasureRadius();
-			[id(305)] void EndMeasuring();
+			[id(305)] void EndMeasuring(VARIANT_BOOL IncludeCurrentMousePosition);
 			[id(306)] void RemoveLastMeasuringPoint();
 			[id(307)] void GetMeasurePoint(DOUBLE* pX, DOUBLE* pY);
+			[id(308)] void SetMeasureLineColor(LONG RgbColor);
 
 #endif			
 

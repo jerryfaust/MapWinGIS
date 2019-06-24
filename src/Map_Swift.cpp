@@ -36,6 +36,7 @@ double SearchTolerance = 10.0;
 long _PointDiameter = 100;
 // current measuring type (may be custom value)
 long _MeasuringType = 0;
+long _MeasureLineColor = 0;
 
 VARIANT_BOOL CMapView::SetConstrainingExtents(DOUBLE xMin, DOUBLE yMin, DOUBLE xMax, DOUBLE yMax)
 {
@@ -883,6 +884,8 @@ BSTR CMapView::QueryLayer(LONG LayerHandle, LPCTSTR WhereClause)
 					// if not on last entry, add ch30 separator
 					if (i < uBound) strResult.Append(ch30);
 				}
+				// release SAFEARRAY lock
+				SafeArrayUnaccessData(results.parray);
 			}
 		}
 	}
@@ -980,8 +983,8 @@ LONG CMapView::AddUserLayer(LONG GeometryType, LPCTSTR Columns, BOOL Visible)
 			// default rendering?
 			this->SetShapeLayerLineWidth(layerHandle, 2);
 			// colors to match measuring tool
-			this->SetShapeLayerLineColor(layerHandle, RGB(255, 127, 0)); // 0xFFFF00);
-			this->SetShapeLayerFillColor(layerHandle, RGB(255, 165, 0)); // 0xFFFF00);
+			this->SetShapeLayerLineColor(layerHandle, _MeasureLineColor); // 0xFFFF00); // RGB(255, 127, 0)
+			this->SetShapeLayerFillColor(layerHandle, _MeasureLineColor); // 0xFFFF00); // RGB(255, 165, 0)
 			this->SetShapeLayerFillTransparency(layerHandle, .30);
 		}
 		break;
@@ -1285,6 +1288,8 @@ BSTR CMapView::GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLa
 						// if not on last entry, add ch30 separator
 						if (i < uBound) strResult.Append(ch30);
 					}
+					// release SAFEARRAY lock
+					SafeArrayUnaccessData(sResults.parray);
 				}
 			}
 		}
@@ -1661,14 +1666,11 @@ void CMapView::SetMeasuringType(LONG MeasuringType)
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	// set the setting in the measuring class
-	// Type 2 is our custom circle measuring, and Type 3 is our custom point measuring,
-	// both of which we handle with a restricted single-segment Distance measure
-	this->GetMeasuring()->put_MeasuringType(MeasuringType >= 2 ? tkMeasuringType::MeasureDistance : (tkMeasuringType)MeasuringType);
+	// Type 2 is our custom circle measuring, which we handle with a restricted single-segment Distance measure
+	this->GetMeasuring()->put_MeasuringType(MeasuringType == 2 ? tkMeasuringType::MeasureDistance : (tkMeasuringType)MeasuringType);
 	this->SetCursorMode(tkCursorMode::cmMeasure);
 	// measure type 2 restricts line drawing to one segment
 	this->GetMeasuringBase()->SingleSegmentDistanceMeasure = (MeasuringType == 2);
-	// measure type 3 restricts line drawing to one point
-	this->GetMeasuringBase()->SinglePointDistanceMeasure = (MeasuringType == 3);
 	// save local value
 	_MeasuringType = MeasuringType;
 }
@@ -1682,7 +1684,6 @@ void CMapView::ClearMeasuring()
 
 	// clear all current measuring input
 	this->GetMeasuring()->Clear();
-	this->GetMeasuringBase()->SinglePointDistanceMeasure = false;
 	this->GetMeasuringBase()->SingleSegmentDistanceMeasure = false;
 }
 
@@ -1702,7 +1703,7 @@ void CMapView::RemoveLastMeasuringPoint()
 // *************************************************
 //			EndMeasuring()						  
 // *************************************************
-void CMapView::EndMeasuring()
+void CMapView::EndMeasuring(BOOL IncludeCurrentMousePosition)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -1711,10 +1712,24 @@ void CMapView::EndMeasuring()
 	// is the SHIFT key pressed
 	UINT kFlags = (GetKeyState(VK_SHIFT) & 0x8000) ? MK_SHIFT : 0;
 	// for standard measure types (0 or 1) we first have to submit a click
-	if (_MeasuringType < 2)
+	if (_MeasuringType < 2 && IncludeCurrentMousePosition)
 		this->OnLButtonDown(kFlags, point);
 	// submit double-click with current mouse position
 	this->OnLButtonDblClk(kFlags, point);
+}
+
+
+// *************************************************
+//			SetMeasureLineColor()						  
+// *************************************************
+void CMapView::SetMeasureLineColor(LONG RgbColor)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// set the line color for the Measure display
+	this->GetMeasuringBase()->LineColor = RgbColor;
+	// save locally
+	_MeasureLineColor = RgbColor;
 }
 
 
@@ -1873,7 +1888,7 @@ BSTR CMapView::GetMeasureWKT()
 		shp->get_XY(0, &x, &y, &vb);
 		shp->put_XY(90, x, y, &vb);
 	}
-	else if (_MeasuringType == 3)
+	else if (pointCount == 1 || _MeasuringType == 3)
 	{
 		long idx;
 		// custom point measuring type
@@ -1885,7 +1900,7 @@ BSTR CMapView::GetMeasureWKT()
 		y = mp->y;
 		shp->AddPoint(x, y, &idx);
 	}
-	else
+	else // standard measuring, ask the measure what it is
 	{
 		// else use measuring data
 		bool isPolygon;
@@ -1967,10 +1982,13 @@ void CMapView::GetMeasurePoint(DOUBLE* pX, DOUBLE* pY)
 	// we only need the zeroeth point
 	MeasurePoint* mp = GetMeasuringBase()->GetPoint(0);
 	
-	*pX = mp->x;
-	*pY = mp->y;
+	if (mp)
+	{
+		*pX = mp->x;
+		*pY = mp->y;
 
-	VARIANT_BOOL vb;
-	// transform to map coordinates
-	_WGS84->Transform(pX, pY, &vb);
+		VARIANT_BOOL vb;
+		// transform to map coordinates
+		_WGS84->Transform(pX, pY, &vb);
+	}
 }

@@ -135,6 +135,7 @@ void ActiveShape::DrawData( Gdiplus::Graphics* g, bool dynamicBuffer,
 	bool hasPolygon = HasPolygon(dynamicBuffer); 
 	if (!hasLine && !hasPolygon && !_showSnapPoint) return;
 
+	// remove transparency (empty fill) for compatibility with custom Circle measure
 	_fillBrush.SetColor(Utility::OleColor2GdiPlus(FillColor, 0)); // FillTransparency));
 	_linePen.SetWidth(LineWidth);
 	_linePen.SetColor(Utility::OleColor2GdiPlus(LineColor, 255));
@@ -641,8 +642,6 @@ bool ActiveShape::HandlePointAdd( double screenX, double screenY, bool ctrl )
 {
 	double projX, projY;
 
-	// custom handling for single-point distance measure
-	if (SinglePointDistanceMeasure && _points.size() == 0) return false;
 	// custom handling for single-line distance measure
 	if (SingleSegmentDistanceMeasure && _points.size() == 1) return false;
 
@@ -688,8 +687,6 @@ bool ActiveShape::HandlePointAdd( double screenX, double screenY, bool ctrl )
 // *******************************************************
 void ActiveShape::AddPoint(double xProj, double yProj, double xScreen, double yScreen, PointPart part)
 {
-	// custom handling for single-point distance measure
-	if (SinglePointDistanceMeasure && _points.size() == 0) return;
 	// custom handling for single-line distance measure
 	if (SingleSegmentDistanceMeasure && _points.size() == 1) return;
 

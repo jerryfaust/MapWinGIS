@@ -661,9 +661,10 @@ public:
 	afx_msg void ClearMeasuring();
 	afx_msg BSTR GetMeasureWKT();
 	afx_msg DOUBLE GetMeasureRadius();
-	afx_msg void EndMeasuring();
+	afx_msg void EndMeasuring(BOOL IncludeCurrentMousePosition);
 	afx_msg void RemoveLastMeasuringPoint();
 	afx_msg void GetMeasurePoint(DOUBLE* pX, DOUBLE* pY);
+	afx_msg void SetMeasureLineColor(LONG RgbColor);
 
 #pragma endregion
 
