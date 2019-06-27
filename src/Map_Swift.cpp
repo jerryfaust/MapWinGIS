@@ -4,6 +4,8 @@
 #include "stdafx.h"
 #include "Map.h"
 #include "ComHelpers\ProjectionHelper.h"
+#include "GeosConverter.h"
+#include "GeosHelper.h"
 
 enum volatileLayerType
 {
@@ -1191,7 +1193,7 @@ BSTR CMapView::GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLa
 					(sfType == ShpfileType::SHP_POINT || sfType == ShpfileType::SHP_POLYLINE))
 				{
 					// add buffer
-					vShape->Buffer(SearchTolerance, 180, &bufferedShape);
+					vShape->Buffer(SearchTolerance, 16, &bufferedShape);
 					// add to definition layer
 					defLayer->EditAddShape(bufferedShape, &idx);
 				}
@@ -1586,6 +1588,101 @@ BSTR CMapView::GetGeometryWKT(LONG LayerHandle, LONG GeomHandle)
 
 
 // ***************************************************************
+//		GetGeometryWKT()
+// ***************************************************************
+BSTR CMapView::GetGeometryWKTEx(LONG LayerHandle, LPCTSTR GeometryHandles)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	CComBSTR bstrWKT("");
+	CString strResult;
+
+	// get Shapefile reference
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		VARIANT_BOOL vb;
+		ShpfileType shpType;
+
+		// create Shape to be union of all shapes
+		CComPtr<IShape> shpUnion = NULL;
+		//ComHelper::CreateShape(&shpUnion);
+		//// of same type as original type
+		//sf->get_ShapefileType2D(&shpType);
+		//// except points become a point collection
+		//if (shpType == ShpfileType::SHP_POINT)
+		//	shpType = ShpfileType::SHP_MULTIPOINT;
+		//shpUnion->Create(shpType, &vb);
+
+		// collection to hold all geometries
+		vector<GEOSGeometry*> geoms;
+
+		// parse geometry handles
+		std::vector<CAtlString> strHandles = ParseDelimitedStrings(GeometryHandles, ch31);
+		// iterate
+		for (CAtlString strHandle : strHandles)
+		{
+			// convert to numeric
+			long handle = atol((LPCTSTR)strHandle);
+			// get Shape
+			CComPtr<IShape> shp = NULL;
+			sf->get_Shape(handle, &shp);
+			if (shp)
+			{
+				// convert shape to GEOS geometry
+				GEOSGeometry* g = GeosConverter::ShapeToGeom(shp);
+				// add to collection
+				geoms.push_back(g);
+			}
+			//else
+			//{
+			//	strResult.Format("Geometry with handle = '%d' not found", GeomHandle);
+			//	bstrWKT = (LPCTSTR)strResult;
+			//}
+		}
+
+		// union all of the shapes
+		GEOSGeometry* geomUnion = GeosConverter::MergeGeometries(geoms, NULL, true, false);
+		// convert back to a Shape
+		vector<IShape*> vShapes;
+		if (GeosConverter::GeomToShapes(geomUnion, &vShapes, false) && vShapes.size() > 0)
+		{
+			// hopefully there's only one
+			int count = vShapes.size();
+			shpUnion = vShapes[0];
+		}
+
+		// create a copy for the transformed shape
+		CComPtr<IShape> pShape = NULL;
+		ComHelper::CreateShape(&pShape);
+		// of same type as original type
+		shpUnion->get_ShapeType2D(&shpType);
+		pShape->Create(shpType, &vb);
+		// transform from map projection to WGS84
+		long count, idx;
+		double x, y;
+		shpUnion->get_NumPoints(&count);
+		for (int i = 0; i < count; i++)
+		{
+			shpUnion->get_XY(i, &x, &y, &vb);
+			_MapProj->Transform(&x, &y, &vb);
+			// add to shape copy
+			pShape->AddPoint(x, y, &idx);
+		}
+		// get WKT string
+		pShape->ExportToWKT(&bstrWKT);
+	}
+	else
+	{
+		strResult.Format("Layer with handle = '%d' not found", LayerHandle);
+		bstrWKT = (LPCTSTR)strResult;
+	}
+	// return result
+	return bstrWKT;
+}
+
+
+// ***************************************************************
 //		GetCurrentCenter()
 // ***************************************************************
 void CMapView::GetCurrentCenter(DOUBLE* Longitude, DOUBLE* Latitude)
@@ -1711,7 +1808,8 @@ void CMapView::EndMeasuring(BOOL IncludeCurrentMousePosition)
 	CPoint point(_mouseX, _mouseY);
 	// is the SHIFT key pressed
 	UINT kFlags = (GetKeyState(VK_SHIFT) & 0x8000) ? MK_SHIFT : 0;
-	// for standard measure types (0 or 1) we first have to submit a click
+	// for standard measure types (0 or 1) 
+	// to include the mouse position, we have to submit a click
 	if (_MeasuringType < 2 && IncludeCurrentMousePosition)
 		this->OnLButtonDown(kFlags, point);
 	// submit double-click with current mouse position
@@ -1730,6 +1828,12 @@ void CMapView::SetMeasureLineColor(LONG RgbColor)
 	this->GetMeasuringBase()->LineColor = RgbColor;
 	// save locally
 	_MeasureLineColor = RgbColor;
+
+	//CComPtr<IImage> pImg;
+	//pImg = (IImage*)SnapShot(this->GetExtents());
+	//VARIANT_BOOL vb;
+	//CComBSTR bs("c:\\temp\\snapshot.jpg");
+	//pImg->Save(bs, VARIANT_FALSE, ImageType::JPEG_FILE, NULL, &vb);
 }
 
 
@@ -1903,7 +2007,8 @@ BSTR CMapView::GetMeasureWKT()
 	else // standard measuring, ask the measure what it is
 	{
 		// else use measuring data
-		bool isPolygon;
+		bool isPolygon = false;
+		bool isClosedLine = false;
 		// what do we have?
 		if (this->GetMeasuringBase()->HasPolygon(false))
 		{
@@ -1911,8 +2016,37 @@ BSTR CMapView::GetMeasureWKT()
 			isPolygon = true;
 		}
 		else if (this->GetMeasuringBase()->HasLine(false) && pointCount > 1)
-		{
-			shp->Create(ShpfileType::SHP_POLYLINE, &vb);
+		{			
+			// watch for last point ~equal to first point
+			// for which we'll treat it like a closed polygon
+			if (pointCount >= 4)
+			{
+				MeasurePoint* mpFirst = GetMeasuringBase()->GetPoint(0);
+				MeasurePoint* mpLast = GetMeasuringBase()->GetPoint(pointCount - 1);
+				// we need the points in the Map projection to get the proper distance
+				double x, y, x2, y2;
+				x = mpFirst->x; y = mpFirst->y;
+				x2 = mpLast->x; y2 = mpLast->y;
+				_WGS84->Transform(&x, &y, &vb);
+				_WGS84->Transform(&x2, &y2, &vb);
+				double distance = sqrt(pow(x2 - x, 2) + pow(y2 - y, 2));
+				double snapTolerance = GetMouseTolerance(ToleranceSnap, true);
+				// if point distance is within snap tolerance...
+				if (distance <= snapTolerance)
+				{
+					// consider it a polygon
+					mpLast->x = mpFirst->x;
+					mpLast->y = mpFirst->y;
+					shp->Create(ShpfileType::SHP_POLYGON, &vb);
+					isClosedLine = true;
+				}
+			}
+			// unless we decided to make it a polygon...
+			if (!isClosedLine)
+			{
+				shp->Create(ShpfileType::SHP_POLYLINE, &vb);
+			}
+			// polygon is FALSE indicating that we don't add a point below to close a polygon
 			isPolygon = false;
 		}
 		else
@@ -1992,3 +2126,72 @@ void CMapView::GetMeasurePoint(DOUBLE* pX, DOUBLE* pY)
 		_WGS84->Transform(pX, pY, &vb);
 	}
 }
+
+
+// ***************************************************************
+//		SetWKTBuffer()
+// ***************************************************************
+BSTR CMapView::SetWKTBuffer(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	CComBSTR bstrWKT(WKT);
+	VARIANT_BOOL vb;
+
+	// create geometry from incoming WKT
+	CComPtr<IShape> shp;
+	ComHelper::CreateShape(&shp);
+	shp->ImportFromWKT(bstrWKT, &vb);
+	ShpfileType sft;
+	shp->get_ShapeType(&sft);
+
+	// transform to Map projection
+	long count;
+	double x, y;
+	shp->get_NumPoints(&count);
+	for (long i = 0; i < count; i++)
+	{
+		shp->get_XY(i, &x, &y, &vb);
+		_WGS84->Transform(&x, &y, &vb);
+		shp->put_XY(i, x, y, &vb);
+	}
+
+	// get buffer size in map units
+	tkUnitsOfMeasure mapUnits;
+	_MapProj->get_LinearUnits(&mapUnits);
+	// convert incoming meters to Map units
+	GetUtils()->ConvertDistance(tkUnitsOfMeasure::umMeters, mapUnits, &BufferSize, &vb);
+
+	// add buffer in proper units
+	CComPtr<IShape> bufferShp;
+	shp->Buffer(BufferSize, Resolution, &bufferShp);
+
+	// point count has changed
+	bufferShp->get_NumPoints(&count);
+	// transform back to WGS84 projection
+	for (long i = 0; i < count; i++)
+	{
+		bufferShp->get_XY(i, &x, &y, &vb);
+		_MapProj->Transform(&x, &y, &vb);
+		bufferShp->put_XY(i, x, y, &vb);
+	}
+
+	// export back to WKT
+	CComBSTR bstrResult;
+	bufferShp->ExportToWKT(&bstrResult);
+
+	return bstrResult;
+}
+
+
+// *************************************************
+//			WriteSnapshotToDC()						  
+// *************************************************
+void CMapView::WriteSnapshotToDC(LONG hDC, LONG WidthInPixels)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// write current map image to the specified DC
+	SnapShotToDC((PVOID)hDC, GetExtents(), WidthInPixels);
+}
+

@@ -7137,6 +7137,9 @@ library MapWinGIS
 			[id(306)] void RemoveLastMeasuringPoint();
 			[id(307)] void GetMeasurePoint(DOUBLE* pX, DOUBLE* pY);
 			[id(308)] void SetMeasureLineColor(LONG RgbColor);
+			[id(309)] BSTR SetWKTBuffer(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution);
+			[id(310)] void WriteSnapshotToDC(LONG hDC);
+			[id(311)] BSTR GetGeometryWKTEx(LONG LayerHandle, LPCTSTR GeometryHandles);
 
 #endif			
 

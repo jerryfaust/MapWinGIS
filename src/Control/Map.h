@@ -665,6 +665,9 @@ public:
 	afx_msg void RemoveLastMeasuringPoint();
 	afx_msg void GetMeasurePoint(DOUBLE* pX, DOUBLE* pY);
 	afx_msg void SetMeasureLineColor(LONG RgbColor);
+	afx_msg BSTR SetWKTBuffer(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution);
+	afx_msg void WriteSnapshotToDC(LONG hDC, LONG WidthInPixels);
+	afx_msg BSTR GetGeometryWKTEx(LONG LayerHandle, LPCTSTR GeometryHandles);
 
 #pragma endregion
 

@@ -330,6 +330,9 @@ BEGIN_DISPATCH_MAP(CMapView, COleControl)
 	DISP_FUNCTION_ID(CMapView, "RemoveLastMeasuringPoint", dispidRemoveLastMeasuringPoint, RemoveLastMeasuringPoint, VT_EMPTY, VTS_NONE)
 	DISP_FUNCTION_ID(CMapView, "GetMeasurePoint", dispidGetMeasurePoint, GetMeasurePoint, VT_EMPTY, VTS_PR8 VTS_PR8)
 	DISP_FUNCTION_ID(CMapView, "SetMeasureLineColor", dispidSetMeasureLineColor, SetMeasureLineColor, VT_EMPTY, VTS_I4)
+	DISP_FUNCTION_ID(CMapView, "SetWKTBuffer", dispidSetWKTBuffer, SetWKTBuffer, VT_BSTR, VTS_BSTR VTS_R8 VTS_I4)
+	DISP_FUNCTION_ID(CMapView, "WriteSnapshotToDC", dispidWriteSnapshotToDC, WriteSnapshotToDC, VT_EMPTY, VTS_I4 VTS_I4)
+	DISP_FUNCTION_ID(CMapView, "GetGeometryWKTEx", dispidGetGeometryWKTEx, GetGeometryWKTEx, VT_BSTR, VTS_I4 VTS_BSTR)
 
 END_DISPATCH_MAP()
 //}}AFX_DISPATCH_MAP

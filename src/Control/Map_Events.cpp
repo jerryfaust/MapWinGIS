@@ -635,6 +635,7 @@ void CMapView::OnLButtonDown(UINT nFlags, CPoint point)
 		case cmMeasure:
 			{
 				bool added = true;
+				ctrl = false;	// custom measure ignores <CTRL> key
 				if (snapping)
 				{
 					int initialPointCount = GetMeasuringBase()->GetPointCount();

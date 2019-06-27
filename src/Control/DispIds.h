@@ -3,6 +3,9 @@ enum {		//{{AFX_DISP_ID(CMapView)
 	// NOTE: ClassWizard will add and remove enumeration elements here
 	//    DO NOT EDIT what you see in these blocks of generated code !
 	// **ClassWizard is a thing of the past... feel free to edit this code.
+	dispidGetGeometryWKTEx = 311L,
+	dispidWriteSnapshotToDC = 310L,
+	dispidSetWKTBuffer = 309L,
 	dispidSetMeasureLineColor = 308L,
 	dispidGetMeasurePoint = 307L,
 	dispidRemoveLastMeasuringPoint = 306L,
