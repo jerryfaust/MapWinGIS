@@ -7140,6 +7140,8 @@ library MapWinGIS
 			[id(309)] BSTR SetWKTBuffer(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution);
 			[id(310)] void WriteSnapshotToDC(LONG hDC);
 			[id(311)] BSTR GetGeometryWKTEx(LONG LayerHandle, LPCTSTR GeometryHandles);
+			[id(312)] BSTR SetWKTBufferEx(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution, BOOL SingleSided, LONG CapStyle, LONG JoinStyle, DOUBLE MitreLimit);
+			[id(313)] BSTR EnumerateDisplays();
 
 #endif			
 

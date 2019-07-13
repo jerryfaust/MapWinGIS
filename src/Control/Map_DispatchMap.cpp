@@ -333,6 +333,8 @@ BEGIN_DISPATCH_MAP(CMapView, COleControl)
 	DISP_FUNCTION_ID(CMapView, "SetWKTBuffer", dispidSetWKTBuffer, SetWKTBuffer, VT_BSTR, VTS_BSTR VTS_R8 VTS_I4)
 	DISP_FUNCTION_ID(CMapView, "WriteSnapshotToDC", dispidWriteSnapshotToDC, WriteSnapshotToDC, VT_EMPTY, VTS_I4 VTS_I4)
 	DISP_FUNCTION_ID(CMapView, "GetGeometryWKTEx", dispidGetGeometryWKTEx, GetGeometryWKTEx, VT_BSTR, VTS_I4 VTS_BSTR)
+	DISP_FUNCTION_ID(CMapView, "SetWKTBufferEx", dispidSetWKTBufferEx, SetWKTBufferEx, VT_BSTR, VTS_BSTR VTS_R8 VTS_I4 VTS_BOOL VTS_I4 VTS_I4 VTS_R8)
+	DISP_FUNCTION_ID(CMapView, "EnumerateDisplays", dispidEnumerateDisplays, EnumerateDisplays, VT_BSTR, VTS_NONE)
 
 END_DISPATCH_MAP()
 //}}AFX_DISPATCH_MAP

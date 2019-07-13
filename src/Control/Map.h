@@ -668,6 +668,8 @@ public:
 	afx_msg BSTR SetWKTBuffer(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution);
 	afx_msg void WriteSnapshotToDC(LONG hDC, LONG WidthInPixels);
 	afx_msg BSTR GetGeometryWKTEx(LONG LayerHandle, LPCTSTR GeometryHandles);
+	afx_msg BSTR SetWKTBufferEx(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution, BOOL SingleSided, LONG CapStyle, LONG JoinStyle, DOUBLE MitreLimit);
+	afx_msg BSTR EnumerateDisplays();
 
 #pragma endregion
 

@@ -893,7 +893,7 @@ BSTR CMapView::QueryLayer(LONG LayerHandle, LPCTSTR WhereClause)
 	}
 
 	//return result;
-	return A2BSTR((LPCTSTR)strResult);
+	return strResult.AllocSysString();
 }
 
 // ***************************************************************
@@ -909,8 +909,7 @@ void CMapView::SetSearchTolerance(DOUBLE Tolerance)
 // standard work to set up visibility for Deleted shapes
 void CMapView::SetupLayerAttributes(IShapefile* sf, LPCTSTR Columns)
 {
-	CComPtr<IShapeDrawingOptions> options;
-	long fx;
+	//CComPtr<IShapeDrawingOptions> options;
 	// projection
 	CComPtr<IGeoProjection> gp = NULL;
 	this->GetGeoProjection()->Clone(&gp);
@@ -987,7 +986,7 @@ LONG CMapView::AddUserLayer(LONG GeometryType, LPCTSTR Columns, BOOL Visible)
 			// colors to match measuring tool
 			this->SetShapeLayerLineColor(layerHandle, _MeasureLineColor); // 0xFFFF00); // RGB(255, 127, 0)
 			this->SetShapeLayerFillColor(layerHandle, _MeasureLineColor); // 0xFFFF00); // RGB(255, 165, 0)
-			this->SetShapeLayerFillTransparency(layerHandle, .30);
+			this->SetShapeLayerFillTransparency(layerHandle, 0.30f);
 		}
 		break;
 	default:
@@ -1057,8 +1056,8 @@ BSTR CMapView::AddUserPoint(DOUBLE xCoord, DOUBLE yCoord)
 	CAtlString strResult;
 	//strResult.Format("%d%s%s", idx, ch31, CAtlString(bstrWKT));
 	strResult.Format("%d", idx);
-	CComBSTR bstrResult((LPCTSTR)strResult);
-	return bstrResult;
+	//
+	return strResult.AllocSysString();
 }
 
 // ***************************************************************
@@ -1117,8 +1116,7 @@ BSTR CMapView::AddUserCircle(DOUBLE xCoord, DOUBLE yCoord, DOUBLE Radius)
 	CAtlString strResult;
 	//strResult.Format("%d%s%s", idx, ch31, CAtlString(bstrWKT));
 	strResult.Format("%d", idx);
-	CComBSTR bstrResult((LPCTSTR)strResult);
-	return bstrResult;
+	return strResult.AllocSysString();
 }
 
 // ***************************************************************
@@ -1296,11 +1294,18 @@ BSTR CMapView::GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLa
 			}
 		}
 	}
+
+	// PROGRESS IDE cannot accept more than 32K string
+	if (strResult.GetLength() > 32000)
+	{
+		// lop off at the last ch30 prior to 32K
+		strResult = strResult.Left(32000);
+		strResult = strResult.Left(strResult.ReverseFind(ch30[0]));
+		//strResult = "NOK";
+	}
+
 	// return results
-	//CComBSTR bstrResult((LPCTSTR)strResult);
-	//return bstrResult;
 	return strResult.AllocSysString();
-	//return A2BSTR((LPCTSTR)strResult);
 }
 
 // ***************************************************************
@@ -1310,7 +1315,6 @@ void CMapView::SetVolatileLayer(LONG GeometryType, LONG LayerHandle)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
-	VARIANT_BOOL vb;
 	CComPtr<IShapefile> sf = NULL;
 
 	// set up layer
@@ -1582,8 +1586,19 @@ BSTR CMapView::GetGeometryWKT(LONG LayerHandle, LONG GeomHandle)
 		strResult.Format("Layer with handle = '%d' not found", LayerHandle);
 		bstrWKT = (LPCTSTR)strResult;
 	}
+
+	// PROGRESS IDE cannot accept more than 32K string
+#ifdef RELEASE_MODE
+	if (bstrWKT.Length() > 32000)
+		bstrWKT = "NOK";
+#endif // RELEASE_MODE
+
 	// return result
-	return bstrWKT;
+	//return bstrWKT;
+	// large BSTR's don't always return properly,
+	// but seem to work if set into CStrings and allocated out the door
+	CAtlString cstr(bstrWKT);
+	return cstr.AllocSysString();
 }
 
 
@@ -1608,7 +1623,7 @@ BSTR CMapView::GetGeometryWKTEx(LONG LayerHandle, LPCTSTR GeometryHandles)
 		CComPtr<IShape> shpUnion = NULL;
 		//ComHelper::CreateShape(&shpUnion);
 		//// of same type as original type
-		//sf->get_ShapefileType2D(&shpType);
+		sf->get_ShapefileType2D(&shpType);
 		//// except points become a point collection
 		//if (shpType == ShpfileType::SHP_POINT)
 		//	shpType = ShpfileType::SHP_MULTIPOINT;
@@ -1616,69 +1631,103 @@ BSTR CMapView::GetGeometryWKTEx(LONG LayerHandle, LPCTSTR GeometryHandles)
 
 		// collection to hold all geometries
 		vector<GEOSGeometry*> geoms;
+		vector<IShape*> shapes;
+
+		CComPtr<IShape> multiPartShape;
+		ComHelper::CreateShape(&multiPartShape);
+		multiPartShape->Create(shpType == ShpfileType::SHP_POINT ? ShpfileType::SHP_MULTIPOINT : shpType, &vb);
 
 		// parse geometry handles
-		std::vector<CAtlString> strHandles = ParseDelimitedStrings(GeometryHandles, ch31);
+		std::vector<CAtlString> strHandles = ParseDelimitedStrings(GeometryHandles, ch30);
 		// iterate
 		for (CAtlString strHandle : strHandles)
 		{
 			// convert to numeric
 			long handle = atol((LPCTSTR)strHandle);
+
 			// get Shape
 			CComPtr<IShape> shp = NULL;
 			sf->get_Shape(handle, &shp);
 			if (shp)
 			{
-				// convert shape to GEOS geometry
-				GEOSGeometry* g = GeosConverter::ShapeToGeom(shp);
-				// add to collection
-				geoms.push_back(g);
+				//// convert shape to GEOS geometry
+				//GEOSGeometry* g = GeosConverter::ShapeToGeom(shp);
+				//// add to collection
+				//geoms.push_back(g);
+
+				// current state of multi-part shape
+				long partIdx, pointIdx;
+				multiPartShape->get_NumParts(&partIdx);
+				multiPartShape->get_NumPoints(&pointIdx);
+				long numPoints;
+				shp->get_NumPoints(&numPoints);
+				for (int idx = 0; idx < numPoints; idx++)
+				{
+					double x, y;
+					long newIdx;
+					// get point from new shape
+					shp->get_XY(idx, &x, &y, &vb);
+					// add it to the multi-part line
+					multiPartShape->AddPoint(x, y, &newIdx);
+				}
+				// identify the new part
+				multiPartShape->InsertPart(pointIdx, &partIdx, &vb);
 			}
-			//else
-			//{
-			//	strResult.Format("Geometry with handle = '%d' not found", GeomHandle);
-			//	bstrWKT = (LPCTSTR)strResult;
-			//}
 		}
 
-		// union all of the shapes
-		GEOSGeometry* geomUnion = GeosConverter::MergeGeometries(geoms, NULL, true, false);
+		long numParts;
+		multiPartShape->get_NumParts(&numParts);
+
+		// now, hopefully convert multi-part Shape to multi-part GEOS geometry
+		GEOSGeometry* g = GeosConverter::ShapeToGeom(multiPartShape);
+		// union the parts
+		GEOSGeometry* geomUnion = GeosHelper::UnaryUnion(g);
+
+		//// union all of the shapes
+		//GEOSGeometry* geomUnion = GeosConverter::MergeGeometries(geoms, NULL, true, false);
+
 		// convert back to a Shape
 		vector<IShape*> vShapes;
 		if (GeosConverter::GeomToShapes(geomUnion, &vShapes, false) && vShapes.size() > 0)
 		{
 			// hopefully there's only one
 			int count = vShapes.size();
+			ASSERT(count == 1);
 			shpUnion = vShapes[0];
 		}
 
-		// create a copy for the transformed shape
-		CComPtr<IShape> pShape = NULL;
-		ComHelper::CreateShape(&pShape);
-		// of same type as original type
-		shpUnion->get_ShapeType2D(&shpType);
-		pShape->Create(shpType, &vb);
 		// transform from map projection to WGS84
-		long count, idx;
+		long count;
 		double x, y;
 		shpUnion->get_NumPoints(&count);
 		for (int i = 0; i < count; i++)
 		{
 			shpUnion->get_XY(i, &x, &y, &vb);
 			_MapProj->Transform(&x, &y, &vb);
-			// add to shape copy
-			pShape->AddPoint(x, y, &idx);
+			// replace the point
+			shpUnion->put_XY(i, x, y, &vb);
 		}
 		// get WKT string
-		pShape->ExportToWKT(&bstrWKT);
+		shpUnion->ExportToWKT(&bstrWKT);
 	}
 	else
 	{
 		strResult.Format("Layer with handle = '%d' not found", LayerHandle);
 		bstrWKT = (LPCTSTR)strResult;
 	}
+
+	// PROGRESS IDE cannot accept more than 32K string
+#ifdef RELEASE_MODE
+	if (bstrWKT.Length() > 32000)
+		bstrWKT = "NOK";
+#endif // RELEASE_MODE
+
 	// return result
-	return bstrWKT;
+	//return bstrWKT;
+	// large BSTR's don't always return properly,
+	// but seem to work if set into CStrings and allocated out the door
+	CAtlString cstr(bstrWKT);
+	return cstr.AllocSysString();
 }
 
 
@@ -2084,8 +2133,18 @@ BSTR CMapView::GetMeasureWKT()
 	// get WKT
 	shp->ExportToWKT(&bstrWKT);
 	
+	// PROGRESS IDE cannot accept more than 32K string
+#ifdef RELEASE_MODE
+	if (bstrWKT.Length() > 32000)
+		bstrWKT = "NOK";
+#endif // RELEASE_MODE
+
 	// return result
-	return bstrWKT;
+	//return bstrWKT;
+	// large BSTR's don't always return properly,
+	// but seem to work if set into CStrings and allocated out the door
+	CAtlString cstr(bstrWKT);
+	return cstr.AllocSysString();
 }
 
 
@@ -2162,6 +2221,8 @@ BSTR CMapView::SetWKTBuffer(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution)
 	// convert incoming meters to Map units
 	GetUtils()->ConvertDistance(tkUnitsOfMeasure::umMeters, mapUnits, &BufferSize, &vb);
 
+	//CComPtr<IShape> tempShp;
+	//shp->Buffer(0.01, 16, &tempShp);
 	// add buffer in proper units
 	CComPtr<IShape> bufferShp;
 	shp->Buffer(BufferSize, Resolution, &bufferShp);
@@ -2180,7 +2241,83 @@ BSTR CMapView::SetWKTBuffer(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution)
 	CComBSTR bstrResult;
 	bufferShp->ExportToWKT(&bstrResult);
 
-	return bstrResult;
+	// PROGRESS IDE cannot accept more than 32K string
+#ifdef  RELEASE_MODE
+	if (bstrResult.Length() > 32000)
+		bstrResult = "NOK";
+#endif //  RELEASE_MODE
+
+	//return bstrResult;
+	// large BSTR's don't always return properly,
+	// but seem to work if set into CStrings and allocated out the door
+	CAtlString cstr(bstrResult);
+	return cstr.AllocSysString();
+}
+
+
+// ***************************************************************
+//		SetWKTBufferEx()
+// ***************************************************************
+BSTR CMapView::SetWKTBufferEx(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution, BOOL SingleSided, LONG CapStyle, LONG JoinStyle, DOUBLE MitreLimit)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	CComBSTR bstrWKT(WKT);
+	VARIANT_BOOL vb;
+
+	// create geometry from incoming WKT
+	CComPtr<IShape> shp;
+	ComHelper::CreateShape(&shp);
+	shp->ImportFromWKT(bstrWKT, &vb);
+	ShpfileType sft;
+	shp->get_ShapeType(&sft);
+
+	// transform to Map projection
+	long count;
+	double x, y;
+	shp->get_NumPoints(&count);
+	for (long i = 0; i < count; i++)
+	{
+		shp->get_XY(i, &x, &y, &vb);
+		_WGS84->Transform(&x, &y, &vb);
+		shp->put_XY(i, x, y, &vb);
+	}
+
+	// get buffer size in map units
+	tkUnitsOfMeasure mapUnits;
+	_MapProj->get_LinearUnits(&mapUnits);
+	// convert incoming meters to Map units
+	GetUtils()->ConvertDistance(tkUnitsOfMeasure::umMeters, mapUnits, &BufferSize, &vb);
+
+	// add buffer in proper units
+	CComPtr<IShape> bufferShp;
+	shp->BufferWithParams(BufferSize, Resolution, SingleSided, (tkBufferCap)CapStyle, (tkBufferJoin)JoinStyle, MitreLimit, &bufferShp);
+
+	// point count has changed
+	bufferShp->get_NumPoints(&count);
+	// transform back to WGS84 projection
+	for (long i = 0; i < count; i++)
+	{
+		bufferShp->get_XY(i, &x, &y, &vb);
+		_MapProj->Transform(&x, &y, &vb);
+		bufferShp->put_XY(i, x, y, &vb);
+	}
+
+	// export back to WKT
+	CComBSTR bstrResult;
+	bufferShp->ExportToWKT(&bstrResult);
+
+	// PROGRESS IDE cannot accept more than 32K string
+#ifdef RELEASE_MODE
+	if (bstrResult.Length() > 32000)
+		bstrResult = "NOK";
+#endif // RELEASE_MODE
+
+	//return bstrResult;
+	// large BSTR's don't always return properly,
+	// but seem to work if set into CStrings and allocated out the door
+	CAtlString cstr(bstrResult);
+	return cstr.AllocSysString();
 }
 
 
@@ -2194,4 +2331,66 @@ void CMapView::WriteSnapshotToDC(LONG hDC, LONG WidthInPixels)
 	// write current map image to the specified DC
 	SnapShotToDC((PVOID)hDC, GetExtents(), WidthInPixels);
 }
+
+
+#pragma region EnumDisplayMonitors
+
+BOOL CALLBACK rectEnumProc(HMONITOR hMonitor, HDC hDC, LPRECT lpRECT, LPARAM dwData)
+{
+	reinterpret_cast< std::vector<RECT>* >(dwData)->push_back(*lpRECT);
+	return true;
+}
+
+BOOL CALLBACK monitorEnumProc(HMONITOR hMonitor, HDC hDC, LPRECT lpRECT, LPARAM dwData)
+{
+	MONITORINFOEX monitorInfo;
+	monitorInfo.cbSize = sizeof(MONITORINFOEX);
+	GetMonitorInfo(hMonitor, &monitorInfo);
+
+	if (monitorInfo.dwFlags == DISPLAY_DEVICE_MIRRORING_DRIVER)
+	{
+		return true;
+	}
+	else
+	{
+		reinterpret_cast< std::vector<MONITORINFOEX>* >(dwData)->push_back(monitorInfo);
+		return true;
+	};
+}
+
+std::vector<MONITORINFOEX> monitorArray;
+std::vector<RECT> rectArray;
+// ***************************************************************
+//		EnumerateDisplays()
+// ***************************************************************
+BSTR CMapView::EnumerateDisplays()
+{
+
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	CString strResult;
+
+	// initiate the call
+	monitorArray.clear();
+	rectArray.clear();
+	//if (EnumDisplayMonitors(NULL, NULL, monitorEnumProc, reinterpret_cast<LPARAM>(&monitorArray)))
+	if (EnumDisplayMonitors(NULL, NULL, rectEnumProc, reinterpret_cast<LPARAM>(&rectArray)))
+	{
+		strResult = "";
+		//for (MONITORINFOEX monitorInfo : monitorArray)
+		for (RECT rect : rectArray)
+		{
+			// each display separated by ch30;
+			// if we're here and string already has characters, than we're on the next display
+			if (strResult.GetLength() > 0) strResult.Append(ch30);
+
+			// top, left, bottom, right, separated by ch31
+			strResult.Format("%d%s%d%s%d%s%d", rect.left, ch31, rect.top, ch31, rect.right, ch31, rect.bottom);
+		}
+	}
+
+	return strResult.AllocSysString();
+}
+
+#pragma endregion
 

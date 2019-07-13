@@ -311,6 +311,15 @@ public:
 		#endif
 	}
 
+	static GEOSGeometry* UnaryUnion(GEOSGeometry* gsGeom)
+	{
+		#ifdef GEOS_NEW
+			return GEOSUnaryUnion_r(getGeosHandle(), gsGeom);
+		#else
+			return GEOSUnaryUnion(gsGeom);
+		#endif
+	}
+
 	static GEOSGeometry* CloneGeometry(const GEOSGeometry* gsGeom)
 	{
 		#ifdef GEOS_NEW
@@ -444,25 +453,26 @@ public:
 
 	static GEOSGeometry* Interpolate(GEOSGeometry* gs, double d, bool normalized = false)
 	{
-#ifdef GEOS_NEW
-		if (normalized)
-			return GEOSInterpolateNormalized_r(getGeosHandle(), gs, d);
-		else
-			return GEOSInterpolate_r(getGeosHandle(), gs, d);
-#else
-		if (normalized)
-			return GEOSInterpolateNormalized(gs, d);
-		else
-			return GEOSInterpolate(gs, d);
-#endif
+		#ifdef GEOS_NEW
+			if (normalized)
+				return GEOSInterpolateNormalized_r(getGeosHandle(), gs, d);
+			else
+				return GEOSInterpolate_r(getGeosHandle(), gs, d);
+		#else
+			if (normalized)
+				return GEOSInterpolateNormalized(gs, d);
+			else
+				return GEOSInterpolate(gs, d);
+		#endif
 	}
 
 	static double Project(GEOSGeometry* g1, GEOSGeometry* g2)
 	{
-#ifdef GEOS_NEW
-		return GEOSProject_r(getGeosHandle(), g1, g2);
-#else
-		return GEOSProject(g1, g2);
-#endif
+		#ifdef GEOS_NEW
+			return GEOSProject_r(getGeosHandle(), g1, g2);
+		#else
+			return GEOSProject(g1, g2);
+		#endif
 	}
+
 };
