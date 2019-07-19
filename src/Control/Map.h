@@ -670,6 +670,9 @@ public:
 	afx_msg BSTR GetGeometryWKTEx(LONG LayerHandle, LPCTSTR GeometryHandles);
 	afx_msg BSTR SetWKTBufferEx(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution, BOOL SingleSided, LONG CapStyle, LONG JoinStyle, DOUBLE MitreLimit);
 	afx_msg BSTR EnumerateDisplays();
+	afx_msg void SetLayerGeomSelection(LONG LayerHandle, LPCTSTR GeometryHandles, BOOL Selected);
+	afx_msg void SetLayerSelectionColor(LONG LayerHandle, LONG RgbColor);
+	afx_msg void SetLayerSelectionTransparency(LONG LayerHandle, DOUBLE PercentTransparency);
 
 #pragma endregion
 

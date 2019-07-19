@@ -2337,7 +2337,8 @@ void CMapView::WriteSnapshotToDC(LONG hDC, LONG WidthInPixels)
 
 BOOL CALLBACK rectEnumProc(HMONITOR hMonitor, HDC hDC, LPRECT lpRECT, LPARAM dwData)
 {
-	reinterpret_cast< std::vector<RECT>* >(dwData)->push_back(*lpRECT);
+	//reinterpret_cast< std::vector<RECT>* >(dwData)->push_back(*lpRECT);
+	reinterpret_cast< std::vector<LONG>* >(dwData)->push_back((LONG)hMonitor);
 	return true;
 }
 
@@ -2360,6 +2361,7 @@ BOOL CALLBACK monitorEnumProc(HMONITOR hMonitor, HDC hDC, LPRECT lpRECT, LPARAM 
 
 std::vector<MONITORINFOEX> monitorArray;
 std::vector<RECT> rectArray;
+std::vector<LONG> longArray;
 // ***************************************************************
 //		EnumerateDisplays()
 // ***************************************************************
@@ -2373,19 +2375,26 @@ BSTR CMapView::EnumerateDisplays()
 	// initiate the call
 	monitorArray.clear();
 	rectArray.clear();
+	longArray.clear();
 	//if (EnumDisplayMonitors(NULL, NULL, monitorEnumProc, reinterpret_cast<LPARAM>(&monitorArray)))
-	if (EnumDisplayMonitors(NULL, NULL, rectEnumProc, reinterpret_cast<LPARAM>(&rectArray)))
-	{
+	//if (EnumDisplayMonitors(NULL, NULL, rectEnumProc, reinterpret_cast<LPARAM>(&rectArray)))
+	if (EnumDisplayMonitors(NULL, NULL, rectEnumProc, reinterpret_cast<LPARAM>(&longArray)))
+		{
 		strResult = "";
 		//for (MONITORINFOEX monitorInfo : monitorArray)
-		for (RECT rect : rectArray)
-		{
+		//for (RECT rect : rectArray)
+		for (LONG hMon : longArray)
+			{
 			// each display separated by ch30;
 			// if we're here and string already has characters, than we're on the next display
 			if (strResult.GetLength() > 0) strResult.Append(ch30);
 
-			// top, left, bottom, right, separated by ch31
-			strResult.Format("%d%s%d%s%d%s%d", rect.left, ch31, rect.top, ch31, rect.right, ch31, rect.bottom);
+			//// left, top, right, bottom, separated by ch31
+			//strResult.Format("%d%s%d%s%d%s%d", rect.left, ch31, rect.top, ch31, rect.right, ch31, rect.bottom);
+
+
+			// hMonitor values, separated by ch30
+			strResult.Format("%d", hMon);
 		}
 	}
 
@@ -2393,4 +2402,70 @@ BSTR CMapView::EnumerateDisplays()
 }
 
 #pragma endregion
+
+
+// ***************************************************************
+//		SetLayerGeomSelection()
+// ***************************************************************
+void CMapView::SetLayerGeomSelection(LONG LayerHandle, LPCTSTR GeometryHandles, BOOL Selected)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// get Shapefile reference
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// parse geometry handles
+		std::vector<CAtlString> strHandles = ParseDelimitedStrings(GeometryHandles, ch30);
+		// iterate
+		for (CAtlString strHandle : strHandles)
+		{
+			// convert to numeric
+			long handle = atol((LPCTSTR)strHandle);
+			// set selection
+			sf->put_ShapeSelected(handle, (Selected == FALSE) ? VARIANT_FALSE : VARIANT_TRUE);
+		}
+	}
+}
+
+// ***************************************************************
+//		SetLayerSelectionColor()
+// ***************************************************************
+void CMapView::SetLayerSelectionColor(LONG LayerHandle, LONG RgbColor)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// get Shapefile reference
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// layer should be 'selectable'
+		sf->put_Selectable(VARIANT_TRUE);
+		// set selection appearance to 'color'
+		sf->put_SelectionAppearance(tkSelectionAppearance::saSelectionColor);
+		// set the color
+		sf->put_SelectionColor(RgbColor);
+	}
+}
+
+// ***************************************************************
+//		SetLayerSelectionTransparency()
+// ***************************************************************
+void CMapView::SetLayerSelectionTransparency(LONG LayerHandle, DOUBLE PercentTransparency)
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// get Shapefile reference
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// layer should be 'selectable'
+		sf->put_Selectable(VARIANT_TRUE);
+		// set selection appearance to 'color'
+		sf->put_SelectionAppearance(tkSelectionAppearance::saSelectionColor);
+		// transparency is a value 0-255, where 0 is transparent
+		BYTE bTransparency = static_cast<BYTE>(255.0 - (255.0 * (PercentTransparency / 100.0)));
+		sf->put_SelectionTransparency(bTransparency);
+	}
+}
 

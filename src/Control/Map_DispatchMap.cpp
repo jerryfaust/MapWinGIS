@@ -335,6 +335,9 @@ BEGIN_DISPATCH_MAP(CMapView, COleControl)
 	DISP_FUNCTION_ID(CMapView, "GetGeometryWKTEx", dispidGetGeometryWKTEx, GetGeometryWKTEx, VT_BSTR, VTS_I4 VTS_BSTR)
 	DISP_FUNCTION_ID(CMapView, "SetWKTBufferEx", dispidSetWKTBufferEx, SetWKTBufferEx, VT_BSTR, VTS_BSTR VTS_R8 VTS_I4 VTS_BOOL VTS_I4 VTS_I4 VTS_R8)
 	DISP_FUNCTION_ID(CMapView, "EnumerateDisplays", dispidEnumerateDisplays, EnumerateDisplays, VT_BSTR, VTS_NONE)
+	DISP_FUNCTION_ID(CMapView, "SetLayerGeomSelection", dispidSetLayerGeomSelection, SetLayerGeomSelection, VT_EMPTY, VTS_I4 VTS_BSTR VTS_BOOL)
+	DISP_FUNCTION_ID(CMapView, "SetLayerSelectionColor", dispidSetLayerSelectionColor, SetLayerSelectionColor, VT_EMPTY, VTS_I4 VTS_I4)
+	DISP_FUNCTION_ID(CMapView, "SetLayerSelectionTransparency", dispidSetLayerSelectionTransparency, SetLayerSelectionTransparency, VT_EMPTY, VTS_I4 VTS_R8)
 
 END_DISPATCH_MAP()
 //}}AFX_DISPATCH_MAP
