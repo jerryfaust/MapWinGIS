@@ -1147,6 +1147,7 @@ private:
 	Layer* GetShapefileLayer(long layerHandle);
 	Layer* GetLayer(long layerHandle);
 	CDrawingOptionsEx* get_ShapefileDrawingOptions(long LayerHandle);
+	CDrawingOptionsEx* get_SelectionDrawingOptions(long LayerHandle);
 	void AlignShapeLayerAndShapes(Layer * layer);
 	ShpfileType get_ShapefileType(long layerHandle);
 	

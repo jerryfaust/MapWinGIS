@@ -58,6 +58,43 @@ CDrawingOptionsEx* CMapView::get_ShapefileDrawingOptions(long layerHandle)
 }
 
 // *************************************************************
+//	  SelectionDrawingOptions
+// *************************************************************
+// Returns 'selection' drawing options for a given shapefile
+CDrawingOptionsEx* CMapView::get_SelectionDrawingOptions(long layerHandle)
+{
+	if (layerHandle >= 0 && layerHandle < (long)_allLayers.size())
+	{
+		Layer * layer = _allLayers[layerHandle];
+		if (layer->IsShapefile())
+		{
+			IShapefile* sf = NULL;
+			if (layer->QueryShapefile(&sf))
+			{
+				IShapeDrawingOptions* options = NULL;
+				sf->get_SelectionDrawingOptions(&options);
+				sf->Release();
+				if (options)
+				{
+					CDrawingOptionsEx* retVal = ((CShapeDrawingOptions*)options)->get_UnderlyingOptions();
+					options->Release();
+					return retVal;
+				}
+			}
+		}
+		else
+		{
+			this->ErrorMessage(tkUNEXPECTED_LAYER_TYPE);
+		}
+	}
+	else
+	{
+		this->ErrorMessage(tkINVALID_LAYER_HANDLE);
+	}
+	return NULL;
+}
+
+// *************************************************************
 //	  GetShapefileType
 // *************************************************************
 // Returns type of the shapefile with a given handle
@@ -234,22 +271,35 @@ BOOL CMapView::GetShapeLayerDrawPoint(long LayerHandle)
 void CMapView::SetShapeLayerDrawPoint(long LayerHandle, BOOL bNewValue)
 {
 	CDrawingOptionsEx* options = get_ShapefileDrawingOptions(LayerHandle);
-	
+	ShpfileType type = this->get_ShapefileType(LayerHandle);
 	if (options)
 	{
-		ShpfileType type = this->get_ShapefileType(LayerHandle);
 		if (type == SHP_POINT || type == SHP_POINTM || type == SHP_POINTZ ||
 			type == SHP_MULTIPOINT || type == SHP_MULTIPOINTZ || type == SHP_MULTIPOINTM)
 		{
 			options->fillVisible = (bNewValue == TRUE);
 			options->linesVisible = (bNewValue == TRUE);
-
 		}
 		else
 		{
 			options->verticesVisible = bNewValue;
 		}
 		ScheduleLayerRedraw();
+	}
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+	if (options)
+	{
+		if (type == SHP_POINT || type == SHP_POINTM || type == SHP_POINTZ ||
+			type == SHP_MULTIPOINT || type == SHP_MULTIPOINTZ || type == SHP_MULTIPOINTM)
+		{
+			options->fillVisible = (bNewValue == TRUE);
+			options->linesVisible = (bNewValue == TRUE);
+		}
+		else
+		{
+			options->verticesVisible = bNewValue;
+		}
 	}
 }
 
@@ -279,6 +329,12 @@ void CMapView::SetShapeLayerPointSize(long LayerHandle, float newValue)
 		options->pointSize = newValue;
 		ScheduleLayerRedraw();
 	}
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+	if (options)
+	{
+		options->pointSize = newValue;
+	}
 }
 
 // *****************************************************************
@@ -302,9 +358,9 @@ short CMapView::GetShapeLayerPointType(long LayerHandle)
 void CMapView::SetShapeLayerPointType(long LayerHandle, short nNewValue)
 {
 	CDrawingOptionsEx* options = get_ShapefileDrawingOptions(LayerHandle);
+	ShpfileType type = this->get_ShapefileType(LayerHandle);
 	if (options)
 	{
-		ShpfileType type = this->get_ShapefileType(LayerHandle);
 		if (type == SHP_POINT || type == SHP_POINTM || type == SHP_POINTZ ||
 			type == SHP_MULTIPOINT || type == SHP_MULTIPOINTZ || type == SHP_MULTIPOINTM)
 		{
@@ -315,6 +371,20 @@ void CMapView::SetShapeLayerPointType(long LayerHandle, short nNewValue)
 			options->verticesType = (tkVertexType)(nNewValue == 0 ? 0 : 1);
 		}
 		ScheduleLayerRedraw();
+	}
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+	if (options)
+	{
+		if (type == SHP_POINT || type == SHP_POINTM || type == SHP_POINTZ ||
+			type == SHP_MULTIPOINT || type == SHP_MULTIPOINTZ || type == SHP_MULTIPOINTM)
+		{
+			options->pointShapeType = (tkPointShapeType)(nNewValue > 5 ? 0 : nNewValue);
+		}
+		else
+		{
+			options->verticesType = (tkVertexType)(nNewValue == 0 ? 0 : 1);
+		}
 	}
 }
 
@@ -349,9 +419,9 @@ OLE_COLOR CMapView::GetShapeLayerPointColor(long LayerHandle)
 void CMapView::SetShapeLayerPointColor(long LayerHandle, OLE_COLOR nNewValue)
 {
 	CDrawingOptionsEx* options = get_ShapefileDrawingOptions(LayerHandle);
+	ShpfileType type = this->get_ShapefileType(LayerHandle);
 	if (options)
 	{
-		ShpfileType type = this->get_ShapefileType(LayerHandle);
 		if (type == SHP_POINT || type == SHP_POINTM || type == SHP_POINTZ ||
 			type == SHP_MULTIPOINT || type == SHP_MULTIPOINTZ || type == SHP_MULTIPOINTM)
 		{
@@ -363,6 +433,20 @@ void CMapView::SetShapeLayerPointColor(long LayerHandle, OLE_COLOR nNewValue)
 		}
 		ScheduleLayerRedraw();
 	}
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+	if (options)
+	{
+		if (type == SHP_POINT || type == SHP_POINTM || type == SHP_POINTZ ||
+			type == SHP_MULTIPOINT || type == SHP_MULTIPOINTZ || type == SHP_MULTIPOINTM)
+		{
+			options->fillColor = nNewValue;
+		}
+		else
+		{
+			options->verticesColor = nNewValue;
+		}
+}
 }
 
 // *****************************************************************
@@ -428,7 +512,13 @@ void CMapView::SetShapeLayerDrawLine(long LayerHandle, BOOL bNewValue)
 		options->linesVisible = (bNewValue == TRUE);
 		ScheduleLayerRedraw();
 	}
-}	
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+	if (options)
+	{
+		options->linesVisible = (bNewValue == TRUE);
+	}
+}
 
 // ***********************************************************
 //		GetShapeLayerLineColor()
@@ -452,6 +542,12 @@ void CMapView::SetShapeLayerLineColor(long LayerHandle, OLE_COLOR nNewValue)
 	{
 		options->lineColor = nNewValue;
 		ScheduleLayerRedraw();
+	}
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+	if (options)
+	{
+		options->lineColor = nNewValue;
 	}
 }
 
@@ -485,6 +581,12 @@ void CMapView::SetShapeLayerLineWidth(long LayerHandle, float newValue)
 		options->lineWidth = newValue;
 		ScheduleLayerRedraw();
 	}
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+	if (options)
+	{
+		options->lineWidth = newValue;
+	}
 }
 
 // *****************************************************************
@@ -492,7 +594,6 @@ void CMapView::SetShapeLayerLineWidth(long LayerHandle, float newValue)
 // *****************************************************************
 short CMapView::GetShapeLayerLineStipple(long LayerHandle)
 {
-	ErrorMessage(tkPROPERTY_NOT_IMPLEMENTED);
 	CDrawingOptionsEx* options = get_ShapefileDrawingOptions(LayerHandle);
 	if (options)
 		return (short)options->lineStipple;				// TODO: convert between enumerations
@@ -505,13 +606,18 @@ short CMapView::GetShapeLayerLineStipple(long LayerHandle)
 // *****************************************************************
 void CMapView::SetShapeLayerLineStipple(long LayerHandle, short nNewValue)
 {
-	ErrorMessage(tkPROPERTY_NOT_IMPLEMENTED);
 	CDrawingOptionsEx* options = get_ShapefileDrawingOptions(LayerHandle);
 	if (options)
 	{	
 		options->lineStipple = (tkDashStyle)nNewValue;	// TODO: convert between enumerations
 		ScheduleLayerRedraw();
-	}		
+	}
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+	if (options)
+	{
+		options->lineStipple = (tkDashStyle)nNewValue;	// TODO: convert between enumerations
+	}
 }
 
 // *****************************************************************
@@ -557,6 +663,12 @@ void CMapView::SetShapeLayerDrawFill(long LayerHandle, BOOL bNewValue)
 		options->fillVisible = (bNewValue == TRUE);
 		ScheduleLayerRedraw();
 	}
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+	if (options)
+	{
+		options->fillVisible = (bNewValue == TRUE);
+	}
 }
 
 // *********************************************************
@@ -581,6 +693,12 @@ void CMapView::SetShapeLayerFillColor(long LayerHandle, OLE_COLOR nNewValue)
 	{
 		options->fillColor = nNewValue;
 		ScheduleLayerRedraw();
+	}
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+	if (options)
+	{
+		options->fillColor = nNewValue;
 	}
 }
 
@@ -613,6 +731,12 @@ void CMapView::SetShapeLayerFillTransparency(long LayerHandle, float newValue)
 	{
 		options->fillTransparency = newValue * 255.0f;
 		ScheduleLayerRedraw();
+	}
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+	if (options)
+	{
+		options->fillTransparency = newValue * 255.0f;
 	}
 }
 #pragma endregion
@@ -647,7 +771,9 @@ void CMapView::SetShapeLayerFillStipple(long LayerHandle, short nNewValue)
 		// TODO: write conversion between tkFillStipple and tkGDIPlusHatchStyle enumerations
 		ScheduleLayerRedraw();
 	}
-}	
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+}
 
 // *****************************************************************
 //		GetShapeLayerStippleTransparent()
@@ -671,6 +797,12 @@ void CMapView::SetShapeLayerStippleTransparent(long LayerHandle, BOOL nNewValue)
 	{
 		options->fillBgTransparent = (nNewValue == TRUE ? true : false);
 		ScheduleLayerRedraw();
+	}
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+	if (options)
+	{
+		options->fillBgTransparent = (nNewValue == TRUE ? true : false);
 	}
 }
 
@@ -696,6 +828,12 @@ void CMapView::SetShapeLayerStippleColor(long LayerHandle, OLE_COLOR nNewValue)
 	{
 		options->fillBgColor = nNewValue;
 		ScheduleLayerRedraw();
+	}
+	// synchronize 'selection' drawing options
+	options = get_SelectionDrawingOptions(LayerHandle);
+	if (options)
+	{
+		options->fillBgColor = nNewValue;
 	}
 }
 

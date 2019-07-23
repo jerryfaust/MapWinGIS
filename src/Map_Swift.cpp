@@ -2441,10 +2441,15 @@ void CMapView::SetLayerSelectionColor(LONG LayerHandle, LONG RgbColor)
 	{
 		// layer should be 'selectable'
 		sf->put_Selectable(VARIANT_TRUE);
-		// set selection appearance to 'color'
-		sf->put_SelectionAppearance(tkSelectionAppearance::saSelectionColor);
-		// set the color
-		sf->put_SelectionColor(RgbColor);
+		// set selection appearance to use DrawingOptions
+		sf->put_SelectionAppearance(tkSelectionAppearance::saDrawingOptions);
+		// get selection options (which have been synchronized with the defaults)
+		CComPtr<IShapeDrawingOptions> selectionOptions;
+		sf->get_SelectionDrawingOptions(&selectionOptions);
+		// override the color
+		selectionOptions->put_LineColor(RgbColor);
+		selectionOptions->put_FillColor(RgbColor);
+		selectionOptions->put_FillBgColor(RgbColor);
 	}
 }
 
@@ -2461,11 +2466,14 @@ void CMapView::SetLayerSelectionTransparency(LONG LayerHandle, DOUBLE PercentTra
 	{
 		// layer should be 'selectable'
 		sf->put_Selectable(VARIANT_TRUE);
-		// set selection appearance to 'color'
-		sf->put_SelectionAppearance(tkSelectionAppearance::saSelectionColor);
-		// transparency is a value 0-255, where 0 is transparent
-		BYTE bTransparency = static_cast<BYTE>(255.0 - (255.0 * (PercentTransparency / 100.0)));
-		sf->put_SelectionTransparency(bTransparency);
+		// set selection appearance to use DrawingOptions
+		sf->put_SelectionAppearance(tkSelectionAppearance::saDrawingOptions);
+		// get selection options (which have been synchronized with the defaults)
+		CComPtr<IShapeDrawingOptions> selectionOptions;
+		sf->get_SelectionDrawingOptions(&selectionOptions);
+		// override the transparency settings
+		//selectionOptions->put_LineTransparency((float)PercentTransparency);
+		selectionOptions->put_FillTransparency((float)PercentTransparency);
 	}
 }
 
