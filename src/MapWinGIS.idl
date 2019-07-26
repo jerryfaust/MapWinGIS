@@ -7145,6 +7145,7 @@ library MapWinGIS
 			[id(314)] void SetLayerGeomSelection(LONG LayerHandle, LPCTSTR GeometryHandles, BOOL Selected);
 			[id(315)] void SetLayerSelectionColor(LONG LayerHandle, LONG RgbColor);
 			[id(316)] void SetLayerSelectionTransparency(LONG LayerHandle, DOUBLE PercentTransparency);
+			[id(317)] void ClearMap();
 
 #endif			
 

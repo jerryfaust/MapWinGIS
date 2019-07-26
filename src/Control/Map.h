@@ -673,6 +673,7 @@ public:
 	afx_msg void SetLayerGeomSelection(LONG LayerHandle, LPCTSTR GeometryHandles, BOOL Selected);
 	afx_msg void SetLayerSelectionColor(LONG LayerHandle, LONG RgbColor);
 	afx_msg void SetLayerSelectionTransparency(LONG LayerHandle, DOUBLE PercentTransparency);
+	afx_msg void ClearMap();
 
 #pragma endregion
 

@@ -2337,8 +2337,8 @@ void CMapView::WriteSnapshotToDC(LONG hDC, LONG WidthInPixels)
 
 BOOL CALLBACK rectEnumProc(HMONITOR hMonitor, HDC hDC, LPRECT lpRECT, LPARAM dwData)
 {
-	//reinterpret_cast< std::vector<RECT>* >(dwData)->push_back(*lpRECT);
-	reinterpret_cast< std::vector<LONG>* >(dwData)->push_back((LONG)hMonitor);
+	reinterpret_cast< std::vector<RECT>* >(dwData)->push_back(*lpRECT);
+	//reinterpret_cast< std::vector<DWORD>* >(dwData)->push_back((DWORD)hMonitor);
 	return true;
 }
 
@@ -2354,6 +2354,9 @@ BOOL CALLBACK monitorEnumProc(HMONITOR hMonitor, HDC hDC, LPRECT lpRECT, LPARAM 
 	}
 	else
 	{
+		// set hMonitor into flags parameter
+		monitorInfo.dwFlags = (DWORD)hMonitor;
+		// set into collection
 		reinterpret_cast< std::vector<MONITORINFOEX>* >(dwData)->push_back(monitorInfo);
 		return true;
 	};
@@ -2361,7 +2364,7 @@ BOOL CALLBACK monitorEnumProc(HMONITOR hMonitor, HDC hDC, LPRECT lpRECT, LPARAM 
 
 std::vector<MONITORINFOEX> monitorArray;
 std::vector<RECT> rectArray;
-std::vector<LONG> longArray;
+std::vector<DWORD> longArray;
 // ***************************************************************
 //		EnumerateDisplays()
 // ***************************************************************
@@ -2376,25 +2379,25 @@ BSTR CMapView::EnumerateDisplays()
 	monitorArray.clear();
 	rectArray.clear();
 	longArray.clear();
-	//if (EnumDisplayMonitors(NULL, NULL, monitorEnumProc, reinterpret_cast<LPARAM>(&monitorArray)))
+	if (EnumDisplayMonitors(NULL, NULL, monitorEnumProc, reinterpret_cast<LPARAM>(&monitorArray)))
 	//if (EnumDisplayMonitors(NULL, NULL, rectEnumProc, reinterpret_cast<LPARAM>(&rectArray)))
-	if (EnumDisplayMonitors(NULL, NULL, rectEnumProc, reinterpret_cast<LPARAM>(&longArray)))
+	//if (EnumDisplayMonitors(NULL, NULL, rectEnumProc, reinterpret_cast<LPARAM>(&longArray)))
 		{
 		strResult = "";
-		//for (MONITORINFOEX monitorInfo : monitorArray)
+		for (MONITORINFOEX monitorInfo : monitorArray)
 		//for (RECT rect : rectArray)
-		for (LONG hMon : longArray)
+		//for (LONG hMon : longArray)
 			{
 			// each display separated by ch30;
 			// if we're here and string already has characters, than we're on the next display
 			if (strResult.GetLength() > 0) strResult.Append(ch30);
 
-			//// left, top, right, bottom, separated by ch31
+			// append hMonitor, left, top, right, bottom, separated by ch31
+			strResult.Format("%s%d%s%d%s%d%s%d%s%d", (LPCTSTR)strResult, monitorInfo.dwFlags, ch31, monitorInfo.rcMonitor.left, ch31, monitorInfo.rcMonitor.top, ch31, monitorInfo.rcMonitor.right, ch31, monitorInfo.rcMonitor.bottom);
 			//strResult.Format("%d%s%d%s%d%s%d", rect.left, ch31, rect.top, ch31, rect.right, ch31, rect.bottom);
 
-
 			// hMonitor values, separated by ch30
-			strResult.Format("%d", hMon);
+			//strResult.Format("%d", hMon);
 		}
 	}
 
@@ -2477,3 +2480,15 @@ void CMapView::SetLayerSelectionTransparency(LONG LayerHandle, DOUBLE PercentTra
 	}
 }
 
+// *************************************************
+//			ClearMap()						  
+// *************************************************
+void CMapView::ClearMap()
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	// clear map and all support constructs
+	this->Clear();
+	_labelColumns.clear();
+	_featureColumns.clear();
+}
