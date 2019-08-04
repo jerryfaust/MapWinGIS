@@ -243,7 +243,7 @@ long CMapView::AddLayerFromFilename(LPCTSTR Filename, tkFileOpenStrategy openStr
 	_fileManager->Open(bstr, openStrategy, _globalCallback, &layer);
 	if (layer) 
 	{
-		long handle = AddLayer(layer, visible);
+		long handle = AddLayer(layer, (visible != VARIANT_FALSE));
 		layer->Release();
 		return handle;
 	}

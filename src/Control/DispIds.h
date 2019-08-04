@@ -3,7 +3,12 @@ enum {		//{{AFX_DISP_ID(CMapView)
 	// NOTE: ClassWizard will add and remove enumeration elements here
 	//    DO NOT EDIT what you see in these blocks of generated code !
 	// **ClassWizard is a thing of the past... feel free to edit this code.
-	dispidClearMap= 317L,
+	dispidSetLayerLabelDuplicates = 322L,
+	dispidSetLayerLabelCollisions = 321L,
+	dispidSetLayerLabelZOrder = 320L,
+	dispidSetLayerLabelLineOptions = 319L,
+	dispidSetLayerLabelPosition = 318L,
+	dispidClearMap = 317L,
 	dispidSetLayerSelectionTransparency = 316L,
 	dispidSetLayerSelectionColor = 315L,
 	dispidSetLayerGeomSelection = 314L,

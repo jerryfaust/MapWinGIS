@@ -632,16 +632,16 @@ public:
 	afx_msg void SetLayerLabelMinScale(LONG LayerHandle, DOUBLE minScale);
 	afx_msg void SetLayerLabelColumn(LONG LayerHandle, LPCTSTR ColumnName);
 	afx_msg void SetLayerFeatureColumn(LONG LayerHandle, LPCTSTR ColumnName);
-	afx_msg void SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, BOOL ScaledFonts);
+	afx_msg void SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, VARIANT_BOOL ScaledFonts);
 	afx_msg void SetLayerLabelScaling(LONG LayerHandle, LONG FontSize, DOUBLE RelativeScale);
 	afx_msg void SetLayerLabelHalo(LONG LayerHandle, LONG HaloSize, LONG HaloColor);
 	afx_msg void SetLayerLabelFrame(LONG LayerHandle, LONG BackColor, LONG FrameColor);
-	afx_msg void SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, LONG FontColor, BOOL FontBold, BOOL FontItalic, DOUBLE RelativeScale);
+	afx_msg void SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, LONG FontColor, VARIANT_BOOL FontBold, VARIANT_BOOL FontItalic, DOUBLE RelativeScale);
 	afx_msg void GenerateLayerLabels(LONG LayerHandle);
-	afx_msg long AddLayerAndResave(LPCTSTR Filename, BOOL visible);
-	afx_msg long AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, LPCTSTR Columns, BOOL visible);
+	afx_msg long AddLayerAndResave(LPCTSTR Filename, VARIANT_BOOL visible);
+	afx_msg long AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, LPCTSTR Columns, VARIANT_BOOL visible);
 	afx_msg BSTR QueryLayer(LONG LayerHandle, LPCTSTR WhereClause);
-	afx_msg LONG AddUserLayer(LONG GeometryType, LPCTSTR Columns, BOOL Visible);
+	afx_msg LONG AddUserLayer(LONG GeometryType, LPCTSTR Columns, VARIANT_BOOL Visible);
 	afx_msg BSTR AddUserPoint(DOUBLE xCoord, DOUBLE yCoord);
 	afx_msg void RemoveUserGeometry(LONG LayerHandle, LONG GeomHandle);
 	afx_msg BSTR GetLayerFeatureByGeometry(LONG SearchLayerHandle, LONG VolatileLayerHandle, LONG VolatileGeomHandle);
@@ -661,19 +661,24 @@ public:
 	afx_msg void ClearMeasuring();
 	afx_msg BSTR GetMeasureWKT();
 	afx_msg DOUBLE GetMeasureRadius();
-	afx_msg void EndMeasuring(BOOL IncludeCurrentMousePosition);
+	afx_msg void EndMeasuring(VARIANT_BOOL IncludeCurrentMousePosition);
 	afx_msg void RemoveLastMeasuringPoint();
 	afx_msg void GetMeasurePoint(DOUBLE* pX, DOUBLE* pY);
 	afx_msg void SetMeasureLineColor(LONG RgbColor);
 	afx_msg BSTR SetWKTBuffer(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution);
 	afx_msg void WriteSnapshotToDC(LONG hDC, LONG WidthInPixels);
 	afx_msg BSTR GetGeometryWKTEx(LONG LayerHandle, LPCTSTR GeometryHandles);
-	afx_msg BSTR SetWKTBufferEx(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution, BOOL SingleSided, LONG CapStyle, LONG JoinStyle, DOUBLE MitreLimit);
+	afx_msg BSTR SetWKTBufferEx(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution, VARIANT_BOOL SingleSided, LONG CapStyle, LONG JoinStyle, DOUBLE MitreLimit);
 	afx_msg BSTR EnumerateDisplays();
-	afx_msg void SetLayerGeomSelection(LONG LayerHandle, LPCTSTR GeometryHandles, BOOL Selected);
+	afx_msg void SetLayerGeomSelection(LONG LayerHandle, LPCTSTR GeometryHandles, VARIANT_BOOL Selected);
 	afx_msg void SetLayerSelectionColor(LONG LayerHandle, LONG RgbColor);
 	afx_msg void SetLayerSelectionTransparency(LONG LayerHandle, DOUBLE PercentTransparency);
 	afx_msg void ClearMap();
+	afx_msg void SetLayerLabelPosition(LONG LayerHandle, LONG Alignment, VARIANT_BOOL AutoOffset, LONG xOffsetPixels, LONG yOffsetPixels);
+	afx_msg void SetLayerLabelLineOptions(LONG LayerHandle, LONG SegmentSelection, LONG Orientation);
+	afx_msg void SetLayerLabelZOrder(LONG LayerHandle, LONG ZOrderPosition);
+	afx_msg void SetLayerLabelCollisions(LONG LayerHandle, VARIANT_BOOL AllowCollisions, LONG PixelDistance);
+	afx_msg void SetLayerLabelDuplicates(LONG LayerHandle, VARIANT_BOOL AllowDuplicates);
 
 #pragma endregion
 

@@ -339,6 +339,11 @@ BEGIN_DISPATCH_MAP(CMapView, COleControl)
 	DISP_FUNCTION_ID(CMapView, "SetLayerSelectionColor", dispidSetLayerSelectionColor, SetLayerSelectionColor, VT_EMPTY, VTS_I4 VTS_I4)
 	DISP_FUNCTION_ID(CMapView, "SetLayerSelectionTransparency", dispidSetLayerSelectionTransparency, SetLayerSelectionTransparency, VT_EMPTY, VTS_I4 VTS_R8)
 	DISP_FUNCTION_ID(CMapView, "ClearMap", dispidClearMap, ClearMap, VT_EMPTY, VTS_NONE)
+	DISP_FUNCTION_ID(CMapView, "SetLayerLabelPosition", dispidSetLayerLabelPosition, SetLayerLabelPosition, VT_EMPTY, VTS_I4 VTS_I4 VTS_BOOL VTS_I4 VTS_I4)
+	DISP_FUNCTION_ID(CMapView, "SetLayerLabelLineOptions", dispidSetLayerLabelLineOptions, SetLayerLabelLineOptions, VT_EMPTY, VTS_I4 VTS_I4 VTS_I4)
+	DISP_FUNCTION_ID(CMapView, "SetLayerLabelZOrder", dispidSetLayerLabelZOrder, SetLayerLabelZOrder, VT_EMPTY, VTS_I4 VTS_I4)
+	DISP_FUNCTION_ID(CMapView, "SetLayerLabelCollisions", dispidSetLayerLabelCollisions, SetLayerLabelCollisions, VT_EMPTY, VTS_I4 VTS_BOOL VTS_I4)
+	DISP_FUNCTION_ID(CMapView, "SetLayerLabelDuplicates", dispidSetLayerLabelDuplicates, SetLayerLabelDuplicates, VT_EMPTY, VTS_I4 VTS_BOOL)
 
 END_DISPATCH_MAP()
 //}}AFX_DISPATCH_MAP

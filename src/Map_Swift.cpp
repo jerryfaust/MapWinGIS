@@ -194,15 +194,15 @@ void CMapView::SetLayerLabelColumn(LONG LayerHandle, LPCTSTR ColumnName)
 
 	// save label columns
 	_labelColumns[LayerHandle] = CAtlString(ColumnName);
-	// pass on to SetLayerLabelAttributes
-	SetLayerLabelAttributes(LayerHandle, "Arial", 10, FALSE);
+	// pass on to SetLayerLabelAttributes, to set default properties
+	SetLayerLabelAttributes(LayerHandle, "Arial", 9, FALSE);
 }
 
 
 // ****************************************************************** 
 //		SetLayerLabelAttributes
 // ****************************************************************** 
-void CMapView::SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, BOOL ScaleFonts)
+void CMapView::SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, VARIANT_BOOL ScaleFonts)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -234,66 +234,42 @@ void CMapView::SetLayerLabelAttributes(LONG LayerHandle, LPCTSTR FontName, LONG 
 				//labels->put_FontOutlineVisible(VARIANT_TRUE);
 				//labels->put_FontOutlineColor(0xFFFFFF);
 				labels->put_AvoidCollisions(VARIANT_TRUE);
-				labels->put_ScaleLabels(ScaleFonts);
-				if (ScaleFonts)
-				{
-					labels->put_FontSize2(FontSize + 2);
-				}
-
-				//// get layer drawing options
-				//IShapeDrawingOptions* options = nullptr;
-				//sf->get_DefaultDrawingOptions(&options);
-				//if (options != nullptr)
+				// allow any non-zero input to be TRUE
+				labels->put_ScaleLabels(ScaleFonts ? VARIANT_TRUE : VARIANT_FALSE);
+				//if (ScaleFonts)
 				//{
-				//// label positioning
-				//tkLabelPositioning labelPos = tkLabelPositioning::lpNone;
-				//BOOL largestPartOnly = FALSE;
+				//	labels->put_FontSize2(FontSize + 2);
+				//}
 
 				// what is the basic geometry type
 				ShpfileType sfType;
 				sf->get_ShapefileType2D(&sfType);
 				if (sfType == ShpfileType::SHP_POINT)
 				{
-					//// center label below
-					//labelPos = tkLabelPositioning::lpCenter;
-					// use square frame
-					//labels->put_FrameVisible(VARIANT_TRUE);
-					//labels->put_FrameType(tkLabelFrameType::lfRectangle);
-					//labels->put_FrameOutlineColor(0);
-					//labels->put_InboxAlignment(tkLabelAlignment::laBottomCenter);
-					// labels
+					// center label below
+					labels->put_Positioning(tkLabelPositioning::lpCenter);
 					labels->put_Alignment(tkLabelAlignment::laBottomCenter);
 					labels->put_AutoOffset(VARIANT_TRUE);
 				}
 				else if (sfType == ShpfileType::SHP_POLYLINE)
 				{
-					//// center label above longest segment
-					//largestPartOnly = TRUE;
-					//labelPos = tkLabelPositioning::lpLongestSegement;
 					// no frame
 					labels->put_FrameVisible(VARIANT_FALSE);
-					// labels
+					// center label above longest segment
+					labels->put_Positioning(tkLabelPositioning::lpLongestSegement);
 					labels->put_Alignment(tkLabelAlignment::laTopCenter);
 					labels->put_AutoOffset(VARIANT_TRUE);
 				}
 				else if (sfType == ShpfileType::SHP_POLYGON)
 				{
-					//// center label
-					//labelPos = tkLabelPositioning::lpCentroid;
 					// no frame ?
 					labels->put_FrameVisible(VARIANT_FALSE);
+					// center label
+					labels->put_Positioning(tkLabelPositioning::lpCenter);
 					labels->put_Alignment(tkLabelAlignment::laCenter);
 					labels->put_AutoOffset(VARIANT_FALSE);
 				}
-				//long fieldIndex = -1;
-				//long count = 0;
-				//CComBSTR bstrColName(strColumn);
-				//sf->get_FieldIndexByName(bstrColName.Copy(), &fieldIndex);
-				//sf->GenerateLabels(fieldIndex, labelPos, largestPartOnly, &count);
 
-				//	// release the reference
-				//	options->Release();
-				//}
 				// release Labels reference
 				labels->Release();
 			}
@@ -392,7 +368,7 @@ void CMapView::SetLayerLabelFrame(LONG LayerHandle, LONG BackColor, LONG FrameCo
 // ****************************************************************** 
 //		SetLayerLabelFont
 // ****************************************************************** 
-void CMapView::SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, LONG FontColor, BOOL FontBold, BOOL FontItalic, DOUBLE RelativeScale)
+void CMapView::SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSize, LONG FontColor, VARIANT_BOOL FontBold, VARIANT_BOOL FontItalic, DOUBLE RelativeScale)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -410,6 +386,7 @@ void CMapView::SetLayerLabelFont(LONG LayerHandle, LPCTSTR FontName, LONG FontSi
 			labels->put_FontName(bstr);
 			labels->put_FontSize(FontSize);
 			labels->put_FontColor(FontColor);
+			// allow any non-zero input to be TRUE
 			labels->put_FontBold(FontBold ? VARIANT_TRUE : VARIANT_FALSE);
 			labels->put_FontItalic(FontItalic ? VARIANT_TRUE : VARIANT_FALSE);
 
@@ -495,27 +472,10 @@ void CMapView::GenerateLayerLabels(LONG LayerHandle)
 		if (labels != nullptr)
 		{
 			// label positioning
-			tkLabelPositioning labelPos = tkLabelPositioning::lpNone;
-			BOOL largestPartOnly = FALSE;
-			// what is the basic geometry type
-			ShpfileType sfType;
-			sf->get_ShapefileType2D(&sfType);
-			if (sfType == ShpfileType::SHP_POINT)
-			{
-				// center label below
-				labelPos = tkLabelPositioning::lpCenter;
-			}
-			else if (sfType == ShpfileType::SHP_POLYLINE)
-			{
-				// center label above longest segment
-				largestPartOnly = TRUE;
-				labelPos = tkLabelPositioning::lpLongestSegement;
-			}
-			else if (sfType == ShpfileType::SHP_POLYGON)
-			{
-				// center label
-				labelPos = tkLabelPositioning::lpCentroid;
-			}
+			tkLabelPositioning labelPos;
+			labels->get_Positioning(&labelPos);
+			// set default for multi-part shapes
+			BOOL largestPartOnly = TRUE;
 
 			// re-generate labels
 			long fieldIndex = -1;
@@ -560,7 +520,7 @@ void DeleteShapefile(LPCTSTR ShapefileName)
 // ***************************************************************
 //		AddLayerAndResave()
 // ***************************************************************
-long CMapView::AddLayerAndResave(LPCTSTR Filename, BOOL visible)
+long CMapView::AddLayerAndResave(LPCTSTR Filename, VARIANT_BOOL visible)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -643,7 +603,7 @@ long CMapView::AddLayerAndResave(LPCTSTR Filename, BOOL visible)
 			}
 		}
 		// add to the map
-		handle = AddLayer(layer, visible);
+		handle = AddLayer(layer, (visible != VARIANT_FALSE));
 
 		// let it go
 		layer->Release();
@@ -659,7 +619,7 @@ long CMapView::AddLayerAndResave(LPCTSTR Filename, BOOL visible)
 // ***************************************************************
 //		AddDatasourceAndResave()
 // ***************************************************************
-long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, LPCTSTR Columns, BOOL visible)
+long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableName, LPCTSTR Columns, VARIANT_BOOL visible)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -689,7 +649,7 @@ long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableNam
 	if (bstrColumns.Length() == 0)
 	{
 		// does the Shapefile already exist?
-		handle = AddLayerFromFilename(CAtlString(bstrShapefile), tkFileOpenStrategy::fosAutoDetect, visible);
+		handle = AddLayerFromFilename(CAtlString(bstrShapefile), tkFileOpenStrategy::fosAutoDetect, visible ? VARIANT_TRUE : VARIANT_FALSE);
 		if (handle >= 0) return handle;
 	}
 
@@ -741,12 +701,12 @@ long CMapView::AddDatasourceAndResave(LPCTSTR ConnectionString, LPCTSTR TableNam
 					VARIANT_BOOL success;
 					sfNew->SaveAs(bstrShapefile, _globalCallback, &success);
 					// add to map
-					handle = AddLayer(sfNew, visible);
+					handle = AddLayer(sfNew, (visible != VARIANT_FALSE));
 					return handle;
 				}
 			}
 		}
-		handle = AddLayer(layer, visible);
+		handle = AddLayer(layer, (visible != VARIANT_FALSE));
 		layer->Release();
 		return handle;
 	}
@@ -934,7 +894,7 @@ void CMapView::SetupLayerAttributes(IShapefile* sf, LPCTSTR Columns)
 // ***************************************************************
 //		AddUserLayer()
 // ***************************************************************
-LONG CMapView::AddUserLayer(LONG GeometryType, LPCTSTR Columns, BOOL Visible)
+LONG CMapView::AddUserLayer(LONG GeometryType, LPCTSTR Columns, VARIANT_BOOL Visible)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -952,7 +912,7 @@ LONG CMapView::AddUserLayer(LONG GeometryType, LPCTSTR Columns, BOOL Visible)
 		{
 			SetupLayerAttributes(sf, Columns);
 			// add layer to map
-			layerHandle = this->AddLayer((LPDISPATCH)sf, Visible);
+			layerHandle = this->AddLayer((LPDISPATCH)sf, (Visible != VARIANT_FALSE));
 			// default rendering?
 			this->SetShapeLayerPointColor(layerHandle, 255);
 			this->SetShapeLayerPointSize(layerHandle, 14);
@@ -966,7 +926,7 @@ LONG CMapView::AddUserLayer(LONG GeometryType, LPCTSTR Columns, BOOL Visible)
 		{
 			SetupLayerAttributes(sf, Columns);
 			// add layer to map
-			layerHandle = this->AddLayer((LPDISPATCH)sf, Visible);
+			layerHandle = this->AddLayer((LPDISPATCH)sf, (Visible != VARIANT_FALSE));
 		}
 		break;
 	case vltPolygon:
@@ -980,7 +940,7 @@ LONG CMapView::AddUserLayer(LONG GeometryType, LPCTSTR Columns, BOOL Visible)
 			//LineWidth = 2.0f;
 			SetupLayerAttributes(sf, Columns);
 			// add layer to map
-			layerHandle = this->AddLayer((LPDISPATCH)sf, Visible);
+			layerHandle = this->AddLayer((LPDISPATCH)sf, (Visible != VARIANT_FALSE));
 			// default rendering?
 			this->SetShapeLayerLineWidth(layerHandle, 2);
 			// colors to match measuring tool
@@ -1438,7 +1398,6 @@ void CMapView::SetCellValues(LONG LayerHandle, LONG GeomHandle, LPCTSTR NameValu
 	CComPtr<IShapefile> sf = this->GetShapefile(LayerHandle);
 	if (sf && sf->StartEditingShapes(VARIANT_TRUE, NULL, &vb) == S_OK && vb == VARIANT_TRUE)
 	{
-		VARIANT_BOOL vb;
 		// first split apart name/value pairs (character 30)
 		std::vector<CAtlString> pairs = ParseDelimitedStrings(NameValuePairs, ch30);
 		for (CAtlString pair : pairs)
@@ -1849,7 +1808,7 @@ void CMapView::RemoveLastMeasuringPoint()
 // *************************************************
 //			EndMeasuring()						  
 // *************************************************
-void CMapView::EndMeasuring(BOOL IncludeCurrentMousePosition)
+void CMapView::EndMeasuring(VARIANT_BOOL IncludeCurrentMousePosition)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -1859,7 +1818,7 @@ void CMapView::EndMeasuring(BOOL IncludeCurrentMousePosition)
 	UINT kFlags = (GetKeyState(VK_SHIFT) & 0x8000) ? MK_SHIFT : 0;
 	// for standard measure types (0 or 1) 
 	// to include the mouse position, we have to submit a click
-	if (_MeasuringType < 2 && IncludeCurrentMousePosition)
+	if (_MeasuringType < 2 && (IncludeCurrentMousePosition != VARIANT_FALSE))
 		this->OnLButtonDown(kFlags, point);
 	// submit double-click with current mouse position
 	this->OnLButtonDblClk(kFlags, point);
@@ -2258,7 +2217,7 @@ BSTR CMapView::SetWKTBuffer(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution)
 // ***************************************************************
 //		SetWKTBufferEx()
 // ***************************************************************
-BSTR CMapView::SetWKTBufferEx(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution, BOOL SingleSided, LONG CapStyle, LONG JoinStyle, DOUBLE MitreLimit)
+BSTR CMapView::SetWKTBufferEx(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution, VARIANT_BOOL SingleSided, LONG CapStyle, LONG JoinStyle, DOUBLE MitreLimit)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -2291,7 +2250,7 @@ BSTR CMapView::SetWKTBufferEx(LPCTSTR WKT, DOUBLE BufferSize, LONG Resolution, B
 
 	// add buffer in proper units
 	CComPtr<IShape> bufferShp;
-	shp->BufferWithParams(BufferSize, Resolution, SingleSided, (tkBufferCap)CapStyle, (tkBufferJoin)JoinStyle, MitreLimit, &bufferShp);
+	shp->BufferWithParams(BufferSize, Resolution, SingleSided ? VARIANT_TRUE : VARIANT_FALSE, (tkBufferCap)CapStyle, (tkBufferJoin)JoinStyle, MitreLimit, &bufferShp);
 
 	// point count has changed
 	bufferShp->get_NumPoints(&count);
@@ -2335,10 +2294,15 @@ void CMapView::WriteSnapshotToDC(LONG hDC, LONG WidthInPixels)
 
 #pragma region EnumDisplayMonitors
 
+BOOL CALLBACK longEnumProc(HMONITOR hMonitor, HDC hDC, LPRECT lpRECT, LPARAM dwData)
+{
+	reinterpret_cast< std::vector<DWORD>* >(dwData)->push_back((DWORD)hMonitor);
+	return true;
+}
+
 BOOL CALLBACK rectEnumProc(HMONITOR hMonitor, HDC hDC, LPRECT lpRECT, LPARAM dwData)
 {
 	reinterpret_cast< std::vector<RECT>* >(dwData)->push_back(*lpRECT);
-	//reinterpret_cast< std::vector<DWORD>* >(dwData)->push_back((DWORD)hMonitor);
 	return true;
 }
 
@@ -2362,9 +2326,9 @@ BOOL CALLBACK monitorEnumProc(HMONITOR hMonitor, HDC hDC, LPRECT lpRECT, LPARAM 
 	};
 }
 
-std::vector<MONITORINFOEX> monitorArray;
-std::vector<RECT> rectArray;
 std::vector<DWORD> longArray;
+std::vector<RECT> rectArray;
+std::vector<MONITORINFOEX> monitorArray;
 // ***************************************************************
 //		EnumerateDisplays()
 // ***************************************************************
@@ -2379,25 +2343,56 @@ BSTR CMapView::EnumerateDisplays()
 	monitorArray.clear();
 	rectArray.clear();
 	longArray.clear();
-	if (EnumDisplayMonitors(NULL, NULL, monitorEnumProc, reinterpret_cast<LPARAM>(&monitorArray)))
-	//if (EnumDisplayMonitors(NULL, NULL, rectEnumProc, reinterpret_cast<LPARAM>(&rectArray)))
-	//if (EnumDisplayMonitors(NULL, NULL, rectEnumProc, reinterpret_cast<LPARAM>(&longArray)))
+	if (EnumDisplayMonitors(NULL, NULL, longEnumProc, reinterpret_cast<LPARAM>(&longArray)))
+	{
+		strResult = "";
+		for (DWORD hMon : longArray)
+		{
+		}
+	}
+	//if (EnumDisplayMonitors(NULL, NULL, monitorEnumProc, reinterpret_cast<LPARAM>(&monitorArray)))
+	if (EnumDisplayMonitors(NULL, NULL, rectEnumProc, reinterpret_cast<LPARAM>(&rectArray)))
 		{
 		strResult = "";
-		for (MONITORINFOEX monitorInfo : monitorArray)
-		//for (RECT rect : rectArray)
-		//for (LONG hMon : longArray)
-			{
+
+		//for (MONITORINFOEX monitorInfo : monitorArray)
+		////for (RECT rect : rectArray)
+		////for (LONG hMon : longArray)
+		//	{
+		//	// each display separated by ch30;
+		//	// if we're here and string already has characters, than we're on the next display
+		//	if (strResult.GetLength() > 0) strResult.Append(ch30);
+
+		//	// append hMonitor, left, top, right, bottom, separated by ch31
+		//	strResult.Format("%s%d%s%d%s%d%s%d%s%d", (LPCTSTR)strResult, monitorInfo.dwFlags, ch31, monitorInfo.rcMonitor.left, ch31, monitorInfo.rcMonitor.top, ch31, monitorInfo.rcMonitor.right, ch31, monitorInfo.rcMonitor.bottom);
+		//	//strResult.Format("%d%s%d%s%d%s%d", rect.left, ch31, rect.top, ch31, rect.right, ch31, rect.bottom);
+
+		//	// hMonitor values, separated by ch30
+		//	//strResult.Format("%d", hMon);
+		//}
+
+		ASSERT(longArray.size() == rectArray.size());
+
+		for (int i = 0; i < longArray.size(); i++)
+		{
+			MONITORINFOEX monitorInfo;
+			monitorInfo.cbSize = sizeof(MONITORINFOEX);
+			::GetMonitorInfo((HMONITOR)longArray[i], &monitorInfo);
+
+			// Get the physical width and height of the monitor.
+			DEVMODE dm;
+			dm.dmSize = sizeof(dm);
+			dm.dmDriverExtra = 0;
+			EnumDisplaySettings(monitorInfo.szDevice, ENUM_CURRENT_SETTINGS, &dm);
+			int cxPhysical = dm.dmPelsWidth;
+			int cyPhysical = dm.dmPelsHeight;
+
 			// each display separated by ch30;
 			// if we're here and string already has characters, than we're on the next display
 			if (strResult.GetLength() > 0) strResult.Append(ch30);
 
 			// append hMonitor, left, top, right, bottom, separated by ch31
-			strResult.Format("%s%d%s%d%s%d%s%d%s%d", (LPCTSTR)strResult, monitorInfo.dwFlags, ch31, monitorInfo.rcMonitor.left, ch31, monitorInfo.rcMonitor.top, ch31, monitorInfo.rcMonitor.right, ch31, monitorInfo.rcMonitor.bottom);
-			//strResult.Format("%d%s%d%s%d%s%d", rect.left, ch31, rect.top, ch31, rect.right, ch31, rect.bottom);
-
-			// hMonitor values, separated by ch30
-			//strResult.Format("%d", hMon);
+			strResult.Format("%s%d%s%d%s%d%s%d%s%d%s%d%s%d", (LPCTSTR)strResult, longArray[i], ch31, rectArray[i].left, ch31, rectArray[i].top, ch31, rectArray[i].right, ch31, rectArray[i].bottom, ch31, cxPhysical, ch31, cyPhysical);
 		}
 	}
 
@@ -2410,7 +2405,7 @@ BSTR CMapView::EnumerateDisplays()
 // ***************************************************************
 //		SetLayerGeomSelection()
 // ***************************************************************
-void CMapView::SetLayerGeomSelection(LONG LayerHandle, LPCTSTR GeometryHandles, BOOL Selected)
+void CMapView::SetLayerGeomSelection(LONG LayerHandle, LPCTSTR GeometryHandles, VARIANT_BOOL Selected)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -2425,8 +2420,8 @@ void CMapView::SetLayerGeomSelection(LONG LayerHandle, LPCTSTR GeometryHandles, 
 		{
 			// convert to numeric
 			long handle = atol((LPCTSTR)strHandle);
-			// set selection
-			sf->put_ShapeSelected(handle, (Selected == FALSE) ? VARIANT_FALSE : VARIANT_TRUE);
+			// set selection (allow any non-zero input to be TRUE)
+			sf->put_ShapeSelected(handle, Selected ? VARIANT_TRUE : VARIANT_FALSE);
 		}
 	}
 }
@@ -2491,4 +2486,137 @@ void CMapView::ClearMap()
 	this->Clear();
 	_labelColumns.clear();
 	_featureColumns.clear();
+}
+
+
+// *************************************************
+//			SetLayerLabelPosition()						  
+// *************************************************
+void CMapView::SetLayerLabelPosition(LONG LayerHandle, LONG Alignment, VARIANT_BOOL AutoOffset, LONG xOffsetPixels, LONG yOffsetPixels)
+{
+	AFX_MANAGE_STATE(AfxGetAppModuleState());
+
+	// get Shapefile reference
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// Labels reference
+		ILabels* labels = nullptr;
+		sf->get_Labels(&labels);
+		if (labels != nullptr)
+		{
+			// set label positioning options
+			labels->put_Alignment((tkLabelAlignment)Alignment);
+			labels->put_AutoOffset(AutoOffset ? VARIANT_TRUE : VARIANT_FALSE);
+			// use specified offset
+			labels->put_OffsetX(xOffsetPixels);
+			labels->put_OffsetY(yOffsetPixels);
+			// set default positioning
+			labels->put_Positioning(tkLabelPositioning::lpCenter);
+			// release Labels reference
+			labels->Release();
+		}
+	}
+}
+
+
+// *************************************************
+//			SetLayerLabelLineOptions()						  
+// *************************************************
+void CMapView::SetLayerLabelLineOptions(LONG LayerHandle, LONG SegmentSelection, LONG Orientation)
+{
+	AFX_MANAGE_STATE(AfxGetAppModuleState());
+
+	// get Shapefile reference
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// Labels reference
+		ILabels* labels = nullptr;
+		sf->get_Labels(&labels);
+		if (labels != nullptr)
+		{
+			// line positioning options
+			labels->put_Positioning((tkLabelPositioning)SegmentSelection);
+			labels->put_LineOrientation((tkLineLabelOrientation)Orientation);
+			// release Labels reference
+			labels->Release();
+		}
+	}
+}
+
+
+// *************************************************
+//			SetLayerLabelZOrder()						  
+// *************************************************
+void CMapView::SetLayerLabelZOrder(LONG LayerHandle, LONG ZOrderPosition)
+{
+	AFX_MANAGE_STATE(AfxGetAppModuleState());
+
+	// get Shapefile reference
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// Labels reference
+		ILabels* labels = nullptr;
+		sf->get_Labels(&labels);
+		if (labels != nullptr)
+		{
+			// label z-order
+			labels->put_VerticalPosition((tkVerticalPosition)ZOrderPosition);
+			// release Labels reference
+			labels->Release();
+		}
+	}
+}
+
+
+// *************************************************
+//			SetLayerLabelCollisions()						  
+// *************************************************
+void CMapView::SetLayerLabelCollisions(LONG LayerHandle, VARIANT_BOOL AllowCollisions, LONG PixelDistance)
+{
+	AFX_MANAGE_STATE(AfxGetAppModuleState());
+
+	// get Shapefile reference
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// Labels reference
+		ILabels* labels = nullptr;
+		sf->get_Labels(&labels);
+		if (labels != nullptr)
+		{
+			// set up collision properties
+			labels->put_AvoidCollisions(AllowCollisions ? VARIANT_FALSE : VARIANT_TRUE);
+			labels->put_CollisionBuffer(PixelDistance);
+			// release Labels reference
+			labels->Release();
+		}
+	}
+}
+
+
+// *************************************************
+//			SetLayerLabelDuplicates()						  
+// *************************************************
+void CMapView::SetLayerLabelDuplicates(LONG LayerHandle, VARIANT_BOOL AllowDuplicates)
+{
+	AFX_MANAGE_STATE(AfxGetAppModuleState());
+
+	// get Shapefile reference
+	CComPtr<IShapefile> sf = GetShapefile(LayerHandle);
+	if (sf)
+	{
+		// Labels reference
+		ILabels* labels = nullptr;
+		sf->get_Labels(&labels);
+		if (labels != nullptr)
+		{
+			// note that this is reversed logic
+			labels->put_RemoveDuplicates(AllowDuplicates ? VARIANT_FALSE : VARIANT_TRUE);
+			// release Labels reference
+			labels->Release();
+		}
+	}
 }
