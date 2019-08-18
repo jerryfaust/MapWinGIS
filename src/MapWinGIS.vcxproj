@@ -167,6 +167,7 @@ if $(PlatformName) == x64 setx  MapWinGISBin64 "$(OutputPath)"
   <ItemDefinitionGroup Condition="'$(Platform)'=='Win32'">
     <Midl>
       <TargetEnvironment>Win32</TargetEnvironment>
+      <TypeLibraryName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)$(ProjectName).tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
       <PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
